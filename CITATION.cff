@@ -3,6 +3,8 @@ message: "If you use this software, please cite it using the metadata from this 
 type: software
 title: "PRECISION_paper: reproducibility package for interpretable drug repurposing in triple-negative breast cancer"
 license: GPL-3.0
+doi: "10.5281/zenodo.22657695"
+version: v1.0.0
 repository-code: "https://github.com/MALL-Lab/PRECISION_paper"
 authors:
   - family-names: Fernandez-Lozano

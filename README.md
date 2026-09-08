@@ -1,7 +1,7 @@
 # PRECISION: interpretable drug repurposing in triple-negative breast cancer with heterogeneous graph neural networks
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22657695.svg)](https://doi.org/10.5281/zenodo.22657695)
 ![Paper](https://img.shields.io/badge/Paper-in%20preparation-lightgrey.svg)
 
 This repository is the reproducibility package for the manuscript *Heterogeneous graph neural networks with biological prior knowledge for interpretable drug repurposing in triple-negative breast cancer*. The pipeline builds a heterogeneous knowledge graph (23,498 nodes: 20,389 genes, 1,185 transcription factors, 1,448 drugs and 476 cell lines, linked by CollecTRI regulatory edges, OmniPath protein-protein interactions, drug-target annotations and PRISM drug-response edges), trains a GraphSAGE model to predict drug-response AUC on a cell-line hold-out split against Ridge, random forest and HGT baselines, explains the model with Integrated Gradients over transcription-factor activities, transfers per-drug predictors to three breast-cancer cohorts (SCAN-B, METABRIC, TCGA-BRCA) for survival validation with a Fisher meta-analysis, and tests the resulting transcription-factor signature in paired primary and metastatic samples from AURORA-US. Every number, table and figure in the manuscript can be traced to a CSV file in `paper/results/` and to the script that wrote it.
@@ -290,7 +290,7 @@ Data files under `data/` keep the licence of their source. DepMap `Model.csv` is
 
 Results under `results/` and `paper/results/` are per-drug or per-TF summary statistics derived from: DepMap, CCLE and PRISM (CC BY 4.0); SCAN-B (CC BY 4.0, Mendeley Data `yzxtxn4nmd` v3); TCGA-BRCA (GDC open access); GDSC (`crossval_prism_to_gdsc.csv` only, per-drug correlations, under the GDSC terms of use, which are non-commercial); METABRIC (`survival_METABRIC.csv`, `shared_drugs.csv`, `forest_positive_controls.csv`, `cox_clinical_comparison.csv`, computed from cBioPortal data that has no explicit licence); and AURORA-US (`aurora_tf_activities.csv`, TF activity scores per sample identified by GEO sample id, derived from the public series GSE209998; no clinical or genotype data are included). The trained checkpoints, `cell_line_embeddings.csv` and the Integrated Gradients tables were computed on a graph that contains OmniPath edges, but they hold model weights, embeddings and attribution scores, not the edges themselves, which is why they are redistributed while the graph and the OmniPath cache are not.
 
-If you use this code or these results, please cite the archived version of this repository (metadata in `CITATION.cff`): DOI 10.5281/zenodo.XXXXXXX.
+If you use this code or these results, please cite the archived version of this repository (metadata in `CITATION.cff`): DOI 10.5281/zenodo.22657695. That DOI always resolves to the latest release; the snapshot released with this version is 10.5281/zenodo.22657696.
 
 The accompanying manuscript is in preparation:
 
