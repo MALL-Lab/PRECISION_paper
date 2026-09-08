@@ -1,0 +1,10 @@
+element,type,count,description
+matrix,prism_n_cell_lines,476,PRISM response matrix: cell lines (rows)
+matrix,prism_n_drugs,1448,PRISM response matrix: drugs (columns)
+matrix,expression_n_genes,19193,matched DepMap expression matrix: protein-coding genes
+matrix,gdsc_n_cell_lines,696,GDSC response matrix: cell lines (rows)
+matrix,gdsc_n_drugs,397,GDSC response matrix: drugs (columns)
+encoding,moa_n_drugs_annotated,1079,drugs with a MOA annotation in the multi-hot encoding (script 02)
+encoding,moa_n_categories,155,MOA classes of the multi-hot encoding (classes with fewer than 3 drugs removed)
+split,holdout_n_train_cells,381,"cell lines in the training split (seed 42, test fraction 0.2)"
+split,holdout_n_test_cells,95,cell lines in the hold-out test split

@@ -1,0 +1,4 @@
+cohort,n_clinical_rows,n_tf_samples,n_tfs_cohort,n_tfs_shared_with_prism,n_patients_after_dedup,n_patients_with_survival,n_events,median_os_time_years,median_followup_years_reverse_km,n_drugs_tested,n_drugs_fdr05,pam50_genefu_n_compared,pam50_genefu_concordance_pct,pam50_genefu_concordance_all_pct
+SCANB,8269,8438,769,769,7662,7397,1188,6.44,7.01,1447,623,,,
+METABRIC,2509,1980,767,767,2509,1979,1143,9.71,16.3,1447,74,1756.0,73.3,65.1
+TCGA,1231,1231,772,771,1095,1072,150,2.35,2.67,1447,0,,,

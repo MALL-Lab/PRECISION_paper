@@ -1,0 +1,18 @@
+metric,value
+n_drugs_main,11
+n_drugs_extended,20
+global_top20_overlap,20
+global_top20_only_main,
+global_top20_only_extended,
+global_spearman_all_tfs,0.9997
+core10_overlap,9
+core10_shared,"AEBP1, ASXL1, BCOR, CREB3L1, HIVEP1, IRX1, KLF8, MZF1, SPDEF"
+core10_only_main,REL
+core10_only_extended,PROX1
+stability_spearman_mean_rank,0.9997
+aurora_main_n_tfs,10
+aurora_main_bonferroni,4
+aurora_main_nominal,4
+aurora_extended_n_tfs,10
+aurora_extended_bonferroni,4
+aurora_extended_nominal,5

@@ -1,0 +1,6 @@
+Drug,SCANB_HR,SCANB_padj,METABRIC_HR,METABRIC_padj,Fisher_padj,Fisher_mean_HR
+paclitaxel,0.47,1.14e-03,1.25,n.s.,8.63e-03,0.7
+docetaxel,0.5,2.43e-03,0.98,n.s.,3.06e-02,0.67
+epirubicin,0.15,5.66e-05,0.12,2.53e-02,3.22e-06,0.11
+olaparib,0.6,1.93e-02,0.85,n.s.,1.21e-01,0.89
+talazoparib,0.4,4.89e-06,0.93,n.s.,1.36e-04,0.55

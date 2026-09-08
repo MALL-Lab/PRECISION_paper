@@ -1,0 +1,7 @@
+config,test_pearson,n_edge_types,excluded
+Full graph,0.75660914,6,set()
+No PPI (gene-gene),0.7585623,4,{'interacts'}
+No CollecTRI (TF-gene),0.75382906,4,{'regulates'}
+No drug-target,0.7550181,4,{'targets'}
+No PPI + No drug-target,0.7296903,2,"{'interacts', 'targets'}"
+Only response edges (no prior knowledge),0.7588612,0,"{'interacts', 'regulates', 'targets'}"

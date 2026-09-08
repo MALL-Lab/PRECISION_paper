@@ -1,0 +1,34 @@
+# Environment used to produce the results in the paper.
+#
+# Python 3.12.10 with the exact package versions listed below.
+# Create with:   conda env create -f environment.yml
+# Activate with: conda activate precision-paper
+#
+# Note on PyTorch: the results were produced with the CUDA 12.8 build
+# (torch 2.11.0+cu128, installed from https://download.pytorch.org/whl/cu128).
+# The plain pin below resolves to the default PyPI wheel for your platform.
+# For a GPU build, install torch first from the PyTorch index and then the rest.
+name: precision-paper
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - torch==2.11.0
+      - torch-geometric==2.7.0
+      - captum==0.9.0
+      - lifelines==0.30.3
+      - decoupler==2.1.4
+      - omnipath==1.0.12
+      - pandas==2.2.3
+      - numpy==2.4.3
+      - scikit-learn==1.8.0
+      - scipy==1.17.1
+      - matplotlib==3.10.8
+      - seaborn==0.13.2
+      - umap-learn==0.5.11
+      - networkx==3.6.1
+      - matplotlib-venn==1.1.2
+      - combat==0.3.3
+      - requests==2.33.0

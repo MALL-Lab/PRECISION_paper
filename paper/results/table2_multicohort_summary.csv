@@ -1,0 +1,5 @@
+Cohort,Technology,N_patients,N_events,N_drugs_tested,Drugs_FDR_005,Pct_significant
+SCANB,RNA-seq,7397,1188,1447,623,43.1
+METABRIC,Microarray,1979,1143,1447,74,5.1
+TCGA,RNA-seq,1072,150,1447,0,0.0
+Fisher_meta,Combined,-,-,1447,551,38.1

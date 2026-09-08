@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+
+# R
+.Rhistory
+.RData
+.Rproj.user/
+
+# Large inputs that are NOT redistributed (see data/README.md)
+data/DepMap/OmicsExpression*.csv
+data/DepMap/CRISPR*.csv
+data/PRISM/raw/
+data/GDSC/raw/
+data/SCANB/
+data/METABRIC/*.rds
+data/TCGA/
+data/AURORA-US/
+data/prior_knowledge/omnipath_ppi.csv
+data/precision_graph/
+
+# Regenerable heavy outputs
+results/v5_final/scanb_perdrug_predictions.csv
+results/**/*.log
+
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+
+# Derived inputs that are rebuilt by the pipeline or inherit non-commercial terms.
+# Note the trailing /* : excluding the directory itself would make the negation
+# below unreachable, because git never descends into an excluded directory, and
+# prism_drug_annotations.csv (read by the candidate selection rule) would be left
+# out of the repository.
+data/precision_processed/*
+!data/precision_processed/prism_drug_annotations.csv
+data/PRISM/processed/
+data/GDSC/processed/
+data/TCGA/gdc_tmp/
+
+# Checkpoints not needed downstream (the four IG checkpoints in results/v4_xai/ are tracked)
+results/*.pt
+results/v2_fair/*.pt
+results/v5_final/*.pt

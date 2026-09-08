@@ -1,0 +1,6 @@
+Model,Global_Pearson,Median_PerDrug_Pearson,Pct_Drugs_GT_0.3
+Ridge_expression,0.728,0.114,10.6
+RF_TF,0.769,0.128,14.2
+SAGE_learned_emb,0.756,0.048,1.4
+HGT_learned_emb,0.505,0.001,0.3
+Ridge_expr_GNN_emb,0.723,0.112,10.4

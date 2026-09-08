@@ -1,0 +1,9 @@
+metric,value
+n_sig_qt,623.0
+n_sig_combat,634.0
+n_sig_both,367.0
+n_sig_only_qt,256.0
+n_sig_only_combat,267.0
+direction_concordant_overall,1061.0
+direction_concordant_among_both_sig,362.0
+direction_concordant_pct_among_both_sig,98.6

@@ -1,0 +1,10 @@
+metric,value
+n_patients,7215.0
+n_drugs_total,1447.0
+inter_drug_corr_mean,0.0726
+inter_drug_corr_median,0.0738
+pc1_explained_var_pct,12.0
+pc1_survival_pvalue,0.0
+n_tested,200.0
+n_nominal_sig_raw,90.0
+n_nominal_sig_residualized,54.0

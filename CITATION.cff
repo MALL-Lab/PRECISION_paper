@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file. The accompanying manuscript is in preparation and will be added here once it has a DOI."
+type: software
+title: "PRECISION_paper: reproducibility package for interpretable drug repurposing in triple-negative breast cancer"
+license: GPL-3.0
+repository-code: "https://github.com/MALL-Lab/PRECISION_paper"
+authors:
+  - family-names: Fernandez-Lozano
+    given-names: Carlos
+    orcid: "https://orcid.org/0000-0003-0413-5677"
+    affiliation: "Department of Computer Science and Information Technologies, Faculty of Computer Science, Universidade da Coruna"
+  - family-names: Ferreiro
+    given-names: David
+    orcid: "https://orcid.org/0000-0003-0757-7702"
+    affiliation: "Department of Computer Science and Information Technologies, Faculty of Computer Science, Universidade da Coruna"
+  - family-names: V.-del-Rio
+    given-names: Patricia
+    orcid: "https://orcid.org/0009-0005-6917-277X"
+    affiliation: "Servicio de Ginecologia, Hospital Universitario Lucus Augusti (HULA). Servizo Galego de Saude (SERGAS)"
+keywords:
+  - graph neural networks
+  - drug repurposing
+  - triple-negative breast cancer
+  - explainable AI
+  - transcription factor activity
+# The manuscript is not published yet, so no journal, DOI or year is stated.
+# When the preprint is posted, set status to preprint and add its DOI; on
+# acceptance, replace them with the journal, the year and the final DOI.
+preferred-citation:
+  type: article
+  status: in-preparation
+  title: "Heterogeneous graph neural networks with biological prior knowledge for interpretable drug repurposing in triple-negative breast cancer"
+  authors:
+    - family-names: Fernandez-Lozano
+      given-names: Carlos
+      orcid: "https://orcid.org/0000-0003-0413-5677"
+      affiliation: "Department of Computer Science and Information Technologies, Faculty of Computer Science, Universidade da Coruna"
+    - family-names: Ferreiro
+      given-names: David
+      orcid: "https://orcid.org/0000-0003-0757-7702"
+      affiliation: "Department of Computer Science and Information Technologies, Faculty of Computer Science, Universidade da Coruna"
+    - family-names: V.-del-Rio
+      given-names: Patricia
+      orcid: "https://orcid.org/0009-0005-6917-277X"
+      affiliation: "Servicio de Ginecologia, Hospital Universitario Lucus Augusti (HULA). Servizo Galego de Saude (SERGAS)"
