@@ -16,10 +16,10 @@ to check an installation before launching `pipeline.py`.
 
 | Source | Provider and license | Files under `data/` | Status |
 |---|---|---|---|
-| DepMap / CCLE | [depmap.org](https://depmap.org/portal/data_page/?tab=allData), CC BY 4.0 | `DepMap/Model.csv` (684 KB) | **Included** |
+| DepMap / CCLE | [depmap.org](https://depmap.org/portal), release 25Q3, depmap.org Terms and Conditions (**not** CC BY 4.0, see `DATA_LICENSES.md`) | `DepMap/Model.csv` (4-column subset, 103 KB) | **Included, reduced** |
 | | | `DepMap/OmicsExpression*.csv` (518 MB, name depends on release, see section 2) | Download |
 | | | `DepMap/CRISPRGeneEffect.csv` | Download |
-| PRISM Repurposing secondary screen | [depmap.org](https://depmap.org/portal/data_page/?tab=allData) (PRISM Repurposing 19Q4), CC BY 4.0 | `PRISM/raw/secondary-screen-replicate-treatment-info.csv` (15 MB) | Download |
+| PRISM Repurposing secondary screen | figshare [10.6084/m9.figshare.9393293.v4](https://doi.org/10.6084/m9.figshare.9393293.v4) (PRISM Repurposing 19Q4), CC BY 4.0 | `PRISM/raw/secondary-screen-replicate-treatment-info.csv` (15 MB) | Download |
 | | | `PRISM/raw/secondary-screen-dose-response-curve-parameters.csv` | Download |
 | | | `PRISM/processed/*.csv` (4 files, see section 1.2) | Derived, not included |
 | GDSC (Sanger) | [cancerrxgene.org](https://www.cancerrxgene.org/), non-exclusive, non-commercial terms of use | `GDSC/raw/sanger-dose-response.csv` | Download |
@@ -40,10 +40,18 @@ Three files, all from the same release (see section 2 for the release policy):
 - `Model.csv`: cell line metadata. The package uses `OncotreeLineage`
   (breast lines) and `ModelSubtypeFeatures` (TNBC flag, substring `TNBC`),
   with fallbacks to `LegacySubSubtype` and `OncotreeSubtype` for older
-  releases. The included copy is the 25Q3 file (2,132 models, 49 columns
-  including `ModelID`). It is redistributed as published by DepMap under
-  CC BY 4.0 and contains the public model annotations, including donor age,
-  sex, race and treatment fields.
+  releases. **The included copy is a column subset, not the file as published
+  by DepMap.** It carries the 2,132 rows of release 25Q3 but only the four
+  fields the package reads: `ModelID`, `OncotreeLineage`, `OncotreeSubtype`
+  and `ModelSubtypeFeatures`. The other 45 columns of the published file,
+  among them donor age, sex, race, treatment and stage, are read by no script
+  here and are not redistributed. To work with the full file, download release
+  25Q3 from [depmap.org/portal](https://depmap.org/portal) and drop it in
+  place: every loader reads it with `index_col=0` and selects columns by name,
+  so the complete file is a drop-in replacement. The published original has
+  md5 `af4472ab734ea3aec974d992b504c7e5`. Note that 25Q3, unlike releases up
+  to 24Q4, has no figshare deposit and is therefore **not under CC BY 4.0**
+  but under the depmap.org Terms and Conditions. See `DATA_LICENSES.md`.
 - `OmicsExpression*.csv`: protein-coding expression, already in
   log2(TPM+1), one row per `ModelID`, columns named `SYMBOL (EntrezID)`.
   `src/data/load_depmap.py` keeps only the symbol.
