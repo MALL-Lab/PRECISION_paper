@@ -5,7 +5,7 @@ title: "PRECISION_paper: reproducibility package for interpretable drug repurpos
 license: GPL-3.0
 abstract: "Code and canonical result tables reproducing every number, table and figure of the PRECISION manuscript on interpretable drug repurposing in triple-negative breast cancer. The GPL-3.0 licence declared here covers the code. The three third-party data files under data/ are not GPL-3.0: each keeps the licence of its source, recorded with its required attribution in DATA_LICENSES.md. In particular, the DepMap 25Q3 cell-line annotations are governed by the depmap.org Terms and Conditions and do not permit commercial use."
 doi: "10.5281/zenodo.22657695"
-version: v1.0.0
+version: v1.1.0
 repository-code: "https://github.com/MALL-Lab/PRECISION_paper"
 authors:
   - family-names: Fernandez-Lozano
