@@ -87,6 +87,26 @@ redistribution. The package rebuilds it instead.
 
 ---
 
+## 4. Expression data, downloaded rather than distributed here
+
+The cell-line expression matrix is not shipped with this package, but the results are
+derived from it, so its licence is recorded here too.
+
+**Licence: CC BY 4.0.** <https://creativecommons.org/licenses/by/4.0/legalcode.en>
+
+- **Title**: DepMap 24Q4 Public
+- **Creator**: Broad DepMap
+- **Source**: figshare deposit,
+  <https://doi.org/10.25452/figshare.plus.27993248.v1>
+- **File**: `OmicsExpressionProteinCodingGenesTPMLogp1.csv`, 19,193 protein-coding genes
+
+Note that expression and cell-line annotations come from two different releases, and
+therefore from two different licences: expression from 24Q4 on figshare under CC BY 4.0,
+annotations from 25Q3 under the depmap.org terms. The 19,193 genes of the processed
+matrices match the 24Q4 column count exactly, whereas 25Q3 has 19,220.
+
+---
+
 ## Derived results
 
 The CSVs under `results/` and `paper/results/` are per-drug and per-TF summary

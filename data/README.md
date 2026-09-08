@@ -228,12 +228,17 @@ changed between releases is the expression matrix:
 the one that exists, so a single `DepMap/` directory can hold either. Every
 other file (`Model.csv`, `CRISPRGeneEffect.csv`) kept its name.
 
-An honest note on provenance. The processed expression used in the paper
-(`counts_matched_prism.csv`, `counts_matched_sanger.csv`) has 19,193 genes,
-which matches the 24Q4 protein-coding matrix. The `Model.csv` shipped here is
-the 25Q3 file, because the cell-line metadata (TNBC flags, lineage of
-supplementary figure S3) were taken from it when the Integrated Gradients
-analyses were run. Expression and metadata therefore come from two releases.
+A note on provenance, now settled by evidence rather than inference. The
+processed expression used in the paper (`counts_matched_prism.csv`,
+`counts_matched_sanger.csv`) has 19,193 genes, and that is the column count of
+the **24Q4** protein-coding matrix exactly. The 25Q3 matrix has 19,220, so the
+expression cannot come from 25Q3. The `Model.csv` shipped here is the 25Q3
+file, verified by md5 against the DepMap release manifest, because the
+cell-line metadata (TNBC flags, lineage of supplementary figure S3) were taken
+from it when the Integrated Gradients analyses were run. Expression and
+metadata therefore come from two releases, and the licences differ: 24Q4 is on
+figshare under CC BY 4.0, whereas 25Q3 has no deposit and falls under the
+depmap.org terms. See `DATA_LICENSES.md`.
 Model identifiers (`ACH-......`) are stable across releases, so the mismatch
 does not affect the matching, but a strict reproduction should download the
 24Q4 expression matrix and may use either `Model.csv`.
