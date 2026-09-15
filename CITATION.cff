@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite it using the metadata from this file. The accompanying manuscript is in preparation and will be added here once it has a DOI."
+message: "If you use this software, please cite it using the metadata from this file. The accompanying manuscript is available as a bioRxiv preprint, given below as the preferred citation."
 type: software
 title: "PRECISION_paper: reproducibility package for interpretable drug repurposing in triple-negative breast cancer"
 license: GPL-3.0
@@ -26,12 +26,16 @@ keywords:
   - triple-negative breast cancer
   - explainable AI
   - transcription factor activity
-# The manuscript is not published yet, so no journal, DOI or year is stated.
-# When the preprint is posted, set status to preprint and add its DOI; on
-# acceptance, replace them with the journal, the year and the final DOI.
+# The manuscript is a bioRxiv preprint. On acceptance, replace status, journal,
+# DOI and dates with those of the published article.
 preferred-citation:
   type: article
-  status: in-preparation
+  status: preprint
+  journal: bioRxiv
+  doi: "10.64898/2026.09.08.750045"
+  year: 2026
+  date-published: "2026-09-14"
+  url: "https://doi.org/10.64898/2026.09.08.750045"
   title: "Heterogeneous graph neural networks with biological prior knowledge for interpretable drug repurposing in triple-negative breast cancer"
   authors:
     - family-names: Fernandez-Lozano
