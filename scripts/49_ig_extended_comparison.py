@@ -5,7 +5,7 @@ PRECISION - Robustness of the IG attributions to the candidate set
 
 Compares the main Integrated Gradients run (the 7 candidates of Table 5 plus
 the 4 positive controls, 11 drugs) with the run on the extended candidate set
-(the 16 kinase or HDAC inhibitors of Supplementary Table S1 plus the 4
+(the 16 kinase or HDAC inhibitors of Supplementary Data 1 plus the 4
 controls, 20 drugs), produced by scripts 32, 35 and 36 with
 --candidate-set extended.
 

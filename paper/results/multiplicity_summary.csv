@@ -1,0 +1,143 @@
+metric,value
+fisher_script21_file_version,chi2.sf
+fisher_script21_n_p_equal_zero,0
+n_drugs_tested_per_cohort,1447
+SCANB_bh_fdr05,623
+METABRIC_bh_fdr05,74
+TCGA_bh_fdr05,0
+fisher_bh_fdr05,551
+SCANB_by_fdr05,391
+METABRIC_by_fdr05,15
+TCGA_by_fdr05,0
+fisher_by_fdr05,338
+fisher_min_p_chi2_sf,6.286e-21
+SCANB_bh_fdr05_hr_below_1,464
+SCANB_bh_fdr05_hr_above_1,159
+SCANB_bh_fdr05_hr_equal_1,0
+fisher_bh_fdr05_not_fdr05_in_any_cohort,34
+fisher_bh_fdr05_not_fdr05_in_any_cohort_drugs,"afatinib, alisertib, amg-232, av-412, bay-11-7082, belinostat, cephalomannine, cobicistat, defactinib, dovitinib, ecamsule-triethanolamine, fleroxacin, gw-501516, idoxuridine, jib04, kd-023, lgx818, ly456236, mk-8245, monensin, nomegestrol-acetate, oxonic-acid, pevonedistat, phenelzine, ramifenazone, rheochrysidin, salinomycin, sdz-wag-994, spiradoline, tamibarotene, tyloxapol, venetoclax, vidarabine, xl-647"
+fisher_by_fdr05_not_fdr05_in_any_cohort,1
+SCANB_bh_fdr05_hr_min_pen0.1,0.0087
+SCANB_bh_fdr05_hr_max_pen0.1,54.44
+SCANB_bh_fdr05_pen0.01,678
+SCANB_bh_fdr05_pen0.1,623
+SCANB_bh_fdr05_pen0.5,306
+SCANB_bh_fdr05_pen1,87
+ablation_median_perdrug_full,0.0319 +/- 0.0086
+ablation_median_perdrug_no_ppi,0.0425 +/- 0.0148
+ablation_median_perdrug_no_collectri,0.0470 +/- 0.0144
+ablation_median_perdrug_no_drug_target,0.0373 +/- 0.0088
+ablation_median_perdrug_no_ppi_no_drug_target,0.0517 +/- 0.0098
+ablation_median_perdrug_response_only,0.0404 +/- 0.0202
+ablation_median_perdrug_shuffled_drug_target,0.0327 +/- 0.0067
+ablation_seeds_full_below_response_only_median_perdrug,3 of 5
+ablation_seeds_full_below_response_only_global,0 of 5
+metabric_pam50_gene_list_source,genefu 2.42.0 pam50$centroids.map via Rscript
+metabric_pam50_present_by_entrez,39
+metabric_pam50_present_by_current_symbol,39
+metabric_pam50_present_by_genefu_symbol,38
+metabric_pam50_missing_by_entrez,"ACTR3B, ANLN, NUF2, CENPF, GPR160, GRB7, MELK, MLPH, ORC6, TMEM45B, UBE2T"
+gdsc_n_cell_lines_total,696
+gdsc_prism_shared_cell_lines,343
+gdsc_prism_shared_cell_lines_in_graph,343
+gdsc_eval_n_cell_lines,343
+gdsc_eval_n_drugs,187
+gdsc_eval_cell_lines_with_train_edges,343 of 343
+gdsc_eval_drugs_with_train_edges,187 of 187
+gdsc_eval_pairs,46539
+gdsc_eval_pairs_prism_train_edge,34179
+gdsc_eval_pairs_prism_test_edge,8579
+gdsc_eval_pairs_not_screened_in_prism,3781
+gdsc_eval_pairs_screened_in_prism_pct_train,79.9
+crossval_split,"edge-level random permutation of the PRISM response edges (np.random.RandomState(42)), 0.2 held out"
+crossval_epochs,300
+crossval_lr,0.001
+crossval_weight_decay,0.0001
+crossval_seed,42
+crossval_hgt_hidden_layers_heads_dropout,"128, 2, 4, 0.2"
+crossval_checkpoint,final epoch (per script 05 docstring and train_model)
+aurora_epirubicin_p,0.0172
+aurora_epirubicin_delta_auc,-0.0148
+aurora_epirubicin_primary_mean_auc,0.717
+aurora_epirubicin_metastasis_mean_auc,0.7022
+aurora_drugs_nominal_p05,782
+aurora_drugs_bh_fdr05,682
+aurora_drugs_by_fdr05,433
+clinical_file_mtime,2026-09-18T18:08:56
+clinical_file_n_drugs,12
+clinical_file_has_talazoparib,True
+clinical_olaparib_hr_scanb,0.73
+clinical_olaparib_padj_scanb,0.141
+clinical_olaparib_padj_metabric,0.92
+hp_script11_ridge_alpha,506
+hp_script11_rf_n_estimators,150
+hp_script11_rf_max_depth,8
+hp_script11_rf_min_samples_leaf,13
+hp_script11_rf_seeds,"42, 123, 456, 789, 1011"
+hp_script12_ridge_alpha,100
+hp_script21_ridge_alpha,100
+hp_gnn_sage,"hidden_dim 128, n_layers 3, dropout 0.33, conv_type sage"
+hp_gnn_hgt,"hidden_dim 128, n_layers 2, n_heads 4, dropout 0.2"
+hp_gnn_optim_lr,0.0013
+hp_gnn_optim_weight_decay,0.0001
+hp_gnn_optim_epochs,800
+hp_gnn_optim_eta_min,1e-05
+script11_hp_source_cited,"docs/plan_hp_baselines.md and scripts/72_baseline_hp_search.py at 3d539a0, outputs in results/v16_hp_search/cesga_11133811"
+hp_search_plan,"docs/plan_hp_baselines.md and scripts/72_baseline_hp_search.py, versioned in 3d539a0 (2026-10-30 17:00:04 +0100)"
+hp_search_outputs,results/v16_hp_search/cesga_11133811
+hp_search_design,"10 random trials per model (TPESampler(seed=42)), 5-fold cross-validation inside the 381 train lines, grouped by PatientID and stratified by OncotreeLineage, median per-drug Pearson over the 200 most complete drugs"
+hp_search_fold_sizes,"76, 77, 76, 76, 76"
+hp_search_table1_test_lines_in_bundle,0 of 95
+hp_search_best_ridge_expression,"alpha 506.1577 (trial 1), rounded to 506, CV 0.1622 +/- 0.0155"
+hp_search_best_rf_tf,"n_estimators 150, max_depth 8, min_samples_leaf 13 (trial 6), CV 0.1794 +/- 0.0287"
+hp_search_edge_diagnostic_ridge_expression,alpha 3162.28: CV 0.1769 +/- 0.0211
+hp_search_edge_diagnostic_rf_tf,"none, the best trial is not in the outer 10% of the range"
+hp_source_ridge_rf,"best trials of scripts/72_baseline_hp_search.py (3d539a0), 5-fold cross-validation inside the train lines, outputs in results/v16_hp_search/cesga_11133811, Ridge alpha 506.1577 rounded to 506"
+hp_previous_script11_ridge_alpha,730
+hp_previous_script11_rf_n_estimators,200
+hp_previous_script11_rf_max_depth,19
+hp_previous_script11_rf_min_samples_leaf,9
+previous_table1_Ridge_expression_global_pearson,0.728
+previous_table1_Ridge_expression_median_perdrug,0.114
+previous_table1_Ridge_expression_pct_gt_03,10.6
+previous_table1_RF_TF_global_pearson,0.769
+previous_table1_RF_TF_median_perdrug,0.128
+previous_table1_RF_TF_pct_gt_03,14.2
+optuna06_commit,089d315 2026-03-29 feat: Optuna tuning script for fair comparison of all models
+optuna06_commit_files,scripts/06_optuna_tuning.py
+optuna06_script_deleted_in,f8cb1aa 2026-04-18
+optuna06_n_trials_baseline,10
+optuna06_n_trials_gnn,15
+optuna06_search_space,"alpha: 1e-3, 1e3, log=True | n_estimators: 50, 300, step=50 | max_depth: 3, 20 | min_samples_leaf: 2, 20 | alpha: 1e-4, 10, log=True | l1_ratio: 0.01, 0.99 | hidden_dim: [64, 128, 256] | n_layers: 1, 3 | dropout: 0.05, 0.4 | lr: 1e-4, 5e-3, log=True | epochs: [200, 300, 500] | n_heads: [2, 4, 8]"
+optuna06_baseline_objective,"median per-drug Pearson, maximized, on the 20% test cell lines of a random cell-line split (RandomState(42)), 200 most complete drugs, no validation split"
+optuna06_result_table,"results/optuna_tuned_comparison.csv added in 9622e25 (2026-03-29 00:55:56 +0100), removed from git in 59d4927 2026-07-19"
+optuna06_best_ridge_expression,"alpha 730.0025, objective 0.1886"
+optuna06_best_rf_tf,"n_estimators 200, max_depth 19, min_samples_leaf 9, objective 0.2111"
+optuna06_baseline_test_cell_lines,95
+optuna06_baseline_test_cells_in_table1_test,95 of 95
+hp_previous_source_ridge_rf,"best trials of scripts/06_optuna_tuning.py (089d315), table results/optuna_tuned_comparison.csv (9622e25), Ridge alpha 730.0025 rounded to 730, in use in script 11 until 3d539a0"
+optuna06_gnn_objective,"global Pearson at the last epoch on the 20% test edges of a random edge-level split of the PRISM response edges (RandomState(42)), no validation split. The MedianPruner is fed the test Huber loss while the study maximizes, so it treats a higher loss as better. Adam without learning-rate scheduler"
+optuna06_gnn_weight_decay,"0.0001, fixed"
+optuna06_best_SAGE_tuned,"hidden 128, layers 3, dropout 0.277, lr 0.00193, epochs 500, objective 0.5522"
+optuna06_best_HGT_tuned,"hidden 64, layers 2, heads 2, dropout 0.175, lr 0.00484, epochs 500, objective 0.5229"
+optuna07_commit,"47aaf50 2026-03-29 11:26:17 +0200, results removed from git in 59d4927 2026-07-19"
+optuna07_n_trials_per_model,35
+optuna07_search_space,"hidden_dim: [64, 128, 256] | n_layers: 1, 4 | dropout: 0.05, 0.4 | lr: 5e-5, 5e-3, log=True | epochs: [300, 500, 800] | n_heads: [2, 4, 8]"
+optuna07_fixed,"Adam weight decay 0.0001, cosine annealing to 1e-05 over the trial epochs"
+optuna07_gnn_objective,"maximum, over the evaluations every 100 epochs, of the global Pearson on the 20% test edges of a random edge-level split of the PRISM response edges (RandomState(42)), no validation split, so the test edges both score the trial and pick its best epoch"
+optuna07_pruner,"MedianPruner configured but trial.report is never called, so no trial can be pruned"
+optuna07_SAGE_trial_states,COMPLETE 35
+optuna07_best_SAGE_ext,"hidden 128, layers 3, dropout 0.3320, lr 0.0012997, epochs 800, objective 0.6049"
+optuna07_HGT_trial_states,COMPLETE 35
+optuna07_best_HGT_ext,"hidden 128, layers 1, heads 8, dropout 0.1007, lr 0.0010935, epochs 800, objective 0.5639"
+hp_first_hardcoded_in,"1f7836d 2026-03-29 12:56:35 +0200, 90 min after 47aaf50"
+hp_source_sage_and_optimizer,"best SAGE_ext trial of scripts/07_optuna_gnn_extended.py (47aaf50), lr and dropout rounded, weight decay and cosine floor fixed in that script"
+hgt_arch_in_use_hidden_layers_heads_dropout,"128, 2, 4, 0.2"
+hgt_equals_optuna06_best,"False (06 best 64, 2, 2, 0.175)"
+hgt_equals_optuna07_best,"False (07 best 128, 1, 8, 0.101)"
+hp_source_hgt,"defaults of script 05 at ec4e5ea, before any Optuna search, trained with the optimizer of the SAGE_ext best"
+gnn_search_split_table1_test_lines_with_training_edges,95 of 95
+gnn_search_split_table1_test_lines_with_objective_edges,95 of 95
+gnn_search_split_training_edges_from_table1_test_lines_pct,20.0
+gnn_search_split_objective_edges_from_table1_test_lines_pct,20.0
+gnn_search_split_graph_file,"data/precision_graph/hetero_graph_prism.pkl modified 2026-03-29T13:00:21, after 47aaf50, so the searched edge order may differ"

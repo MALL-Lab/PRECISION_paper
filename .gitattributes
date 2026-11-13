@@ -1,0 +1,3 @@
+# Files whose exact bytes paper/scripts/generate_paper_results.py checks by SHA-256.
+# They are stored as they are, with no line-ending conversion on any platform.
+results/v16_hp_search/inputs/folds.csv -text

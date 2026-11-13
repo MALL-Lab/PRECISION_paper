@@ -9,9 +9,13 @@ transcriptional programmes that may drive TF activity changes independently
 of the metastatic state itself.
 
 This script stratifies the primary vs metastasis comparison by metastatic
-biopsy tissue site for the four Bonferroni-significant IG TFs (CREB3L1,
-KLF8, AEBP1, SPDEF). Each site with >=3 paired patients yields a per-site
-delta and Wilcoxon p.
+biopsy tissue site for the IG core TFs validated by script 36
+(results/v9_aurora/aurora_tf_ig_validation.csv). The TFs that are
+Bonferroni-significant there get the direction concordance summary, and the
+rest of the core is stratified as well. Each site with >=3 paired patients
+yields a per-site delta and Wilcoxon p. The TF lists used to be hard-coded,
+they are now read from script 36 so that the analysis follows the IG core of
+the current models.
 
 Outputs in paper/results/:
   aurora_tf_by_site.csv         - rows = (TF, site)
@@ -45,8 +49,21 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("aurora_site")
 
-BONF_TFS = ["CREB3L1", "KLF8", "AEBP1", "SPDEF"]
-EXTRA_TFS = ["MZF1", "HIVEP1", "REL", "IRX1", "ASXL1", "BCOR"]
+ROOT = Path(__file__).parent.parent
+DATA = DATA_DIR
+RESULTS = RESULTS_DIR / "v9_aurora"
+
+
+def load_ig_tfs() -> tuple[list[str], list[str]]:
+    """IG core TFs of script 36, split into Bonferroni-significant and the rest.
+
+    Both lists keep the order of the validation table (increasing p-value).
+    """
+    ig = pd.read_csv(RESULTS / "aurora_tf_ig_validation.csv")
+    sig = ig["bonferroni_sig"]
+    if sig.dtype != bool:
+        raise ValueError(f"bonferroni_sig is not boolean in aurora_tf_ig_validation.csv ({sig.dtype})")
+    return ig.loc[sig, "tf"].tolist(), ig.loc[~sig, "tf"].tolist()
 
 
 def parse_geo_series_matrix(path: Path) -> pd.DataFrame:
@@ -110,6 +127,10 @@ def main() -> int:
     logger.info("GEO metadata: %d samples", len(meta))
     logger.info("Tissue sites: %s", dict(meta["tissue_site"].value_counts()))
 
+    if all(s.startswith("AUR-P") for s in tf_acts.index.astype(str)):
+        raise ValueError("The AURORA-US sample codes are pseudonymized (AUR-Pnn-<site>), so the GEO metadata "
+                         "cannot be matched. Rerun scripts/22_aurora_complementary.py from the GEO files first "
+                         "(see data/README.md).")
     patient_list, role_list, site_list = [], [], []
     for sid in tf_acts.index.astype(str):
         pid, role = parse_patient_tissue(sid)
@@ -134,7 +155,9 @@ def main() -> int:
     sites_to_keep = [s for s, n in site_counts.items() if n >= 3]
     logger.info("Sites with >=3 biopsies in paired patients: %s", sites_to_keep)
 
-    all_tfs = [tf for tf in (BONF_TFS + EXTRA_TFS) if tf in tf_acts.columns]
+    bonf_tfs, extra_tfs = load_ig_tfs()
+    logger.info("IG core TFs from script 36: Bonferroni %s, rest %s", bonf_tfs, extra_tfs)
+    all_tfs = [tf for tf in (bonf_tfs + extra_tfs) if tf in tf_acts.columns]
 
     rows = []
     for tf in all_tfs:
@@ -173,7 +196,7 @@ def main() -> int:
     df = pd.DataFrame(rows).sort_values(["tf", "site"]).reset_index(drop=True)
     df.to_csv(OUT_DIR / "aurora_tf_by_site.csv", index=False)
     logger.info("\nBONF TFs by site:\n%s",
-                df[df["tf"].isin(BONF_TFS)].to_string(index=False))
+                df[df["tf"].isin(bonf_tfs)].to_string(index=False))
 
     pivot_d = df.pivot_table(index="tf", columns="site", values="delta")
     pivot_n = df.pivot_table(index="tf", columns="site", values="n_paired")
@@ -189,10 +212,10 @@ def main() -> int:
         f.write("\n# per-site n_paired\n")
         pivot_n.astype("Int64").to_csv(f)
 
-    bonf_df = df[df["tf"].isin(BONF_TFS) & df["n_paired"].ge(3) &
+    bonf_df = df[df["tf"].isin(bonf_tfs) & df["n_paired"].ge(3) &
                   df["delta"].notna()]
     logger.info("\nBONF TF direction concordance across sites:")
-    for tf in BONF_TFS:
+    for tf in bonf_tfs:
         sub = bonf_df[bonf_df["tf"] == tf]["delta"]
         if len(sub):
             signs = np.sign(sub)

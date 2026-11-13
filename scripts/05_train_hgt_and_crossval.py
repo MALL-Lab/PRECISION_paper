@@ -8,6 +8,26 @@ PRECISION Phase 1, Step 5: HGT model + cross-validation PRISM to GDSC.
    not used in the paper)
 3. Cross-validate: train on PRISM, test on GDSC shared drugs/cell lines
 
+The HGT is trained for 300 epochs with initialization seed 42 and the weights
+of the final epoch are kept (the checkpoint used to be the one with the lowest
+test loss, which let the test edges choose the model). It has no learned drug
+embeddings, so drugs are represented by their node features and message
+passing only. Response edges never take part in message passing.
+
+The split is edge-level, not the cell-line hold-out of Table 1: 20% of the
+PRISM (cell line, drug) response edges are held out at random, so every cell
+line and every drug is seen in training. hgt_per_drug_results.csv is therefore
+not comparable with Table 1. For the GDSC evaluation it means that all shared
+cell lines and drugs took part in training, and about 80% of the evaluated
+(cell line, drug) pairs that PRISM also screened had their PRISM AUC as a
+training edge. The per-drug GDSC correlation measures how well the
+PRISM-trained model reproduces the GDSC response of cell lines and drugs it
+has seen, bounded by the agreement between the two screens, and not
+generalization to unseen cell lines.
+
+Drug names are compared in lowercase on both screens, like the drug node
+names returned by load_hetero_data, and are written in lowercase.
+
 Run from project root:
     python scripts/05_train_hgt_and_crossval.py
 """
@@ -29,7 +49,9 @@ from config import DATA_DIR, RESULTS_DIR
 
 from src.graph.hetero_data import load_hetero_data
 from src.models.hetero_gnn import HeteroGNNDrugResponse, HGTDrugResponse
+from src.data.drug_names import normalize_drug_columns
 from src.data.load_drug_response import load_prism_response, load_gdsc_response
+from src.data.splits import set_all_seeds
 
 logging.basicConfig(
     level=logging.INFO,
@@ -78,9 +100,11 @@ def build_mp_edges(data):
 
 def train_model(model, x_dict, mp_edges, train_cell, train_drug, train_auc,
                 test_cell, test_drug, test_auc, epochs=EPOCHS, lr=LR):
+    """Train for `epochs` epochs and return the final-epoch model.
+
+    The test metrics are only logged, they never choose a checkpoint.
+    """
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=WEIGHT_DECAY)
-    best_test_loss = float("inf")
-    best_state = None
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -96,14 +120,9 @@ def train_model(model, x_dict, mp_edges, train_cell, train_drug, train_auc,
                 tp = model(x_dict, mp_edges, test_cell, test_drug)
                 tl = F.huber_loss(tp, test_auc).item()
                 pr, _ = pearsonr(test_auc.cpu().numpy(), tp.cpu().numpy())
-            if tl < best_test_loss:
-                best_test_loss = tl
-                best_state = {k: v.clone() for k, v in model.state_dict().items()}
             logger.info("Epoch %3d | Train: %.4f | Test: %.4f | Pearson: %.4f",
                         epoch, loss.item(), tl, pr)
 
-    if best_state:
-        model.load_state_dict(best_state)
     return model
 
 
@@ -147,6 +166,7 @@ def main():
     logger.info("TRAINING HGT (Heterogeneous Graph Transformer)")
     logger.info("=" * 60)
 
+    set_all_seeds(SEED)
     hgt = HGTDrugResponse(
         node_feature_dims=node_feat_dims,
         hidden_dim=HIDDEN_DIM,
@@ -173,6 +193,7 @@ def main():
                 len(valid), valid["pearson_r"].median(),
                 (valid["pearson_r"] > 0.3).mean() * 100)
 
+    # Final-epoch weights, the file name is kept so that a rerun replaces the old checkpoint.
     torch.save(hgt.state_dict(), RESULTS_DIR / "best_hgt_model.pt")
 
     # ── Cross-validation PRISM→GDSC ───────────────────────────────────────
@@ -180,20 +201,17 @@ def main():
     logger.info("CROSS-VALIDATION: Train PRISM → Test GDSC")
     logger.info("=" * 60)
 
-    # Load GDSC response
-    gdsc_response = load_gdsc_response(use_processed=True)
+    # Drug names in lowercase on both screens, like the drug node names of the graph
+    gdsc_response = normalize_drug_columns(load_gdsc_response(use_processed=True))
+    prism_response = normalize_drug_columns(load_prism_response(use_processed=True))
 
     # Find shared cell lines and drugs between PRISM and GDSC
-    prism_response = load_prism_response(use_processed=True)
     shared_cells = sorted(set(prism_response.index) & set(gdsc_response.index))
-    # Match drug names (lowercase comparison)
-    prism_drugs_lower = {d.lower(): d for d in prism_response.columns}
-    gdsc_drugs_lower = {d.lower(): d for d in gdsc_response.columns}
-    shared_drugs_lower = set(prism_drugs_lower) & set(gdsc_drugs_lower)
+    shared_drugs = sorted(set(prism_response.columns) & set(gdsc_response.columns))
 
-    logger.info("Cross-val shared: %d cell lines, %d drugs", len(shared_cells), len(shared_drugs_lower))
+    logger.info("Cross-val shared: %d cell lines, %d drugs", len(shared_cells), len(shared_drugs))
 
-    if len(shared_drugs_lower) < 10:
+    if len(shared_drugs) < 10:
         logger.warning("Too few shared drugs for cross-validation, skipping")
     else:
         # For each shared drug+cell line pair in GDSC, predict using PRISM-trained model
@@ -201,21 +219,18 @@ def main():
         cell_map = node_maps["cell_line"]
 
         crossval_results = []
-        for drug_lower in shared_drugs_lower:
-            prism_name = prism_drugs_lower[drug_lower]
-            gdsc_name = gdsc_drugs_lower[drug_lower]
-
-            if prism_name not in drug_map:
+        for drug in shared_drugs:
+            if drug not in drug_map:
                 continue
 
-            drug_id = drug_map[prism_name]
+            drug_id = drug_map[drug]
 
             cells_with_gdsc = []
             gdsc_aucs = []
             for cell in shared_cells:
                 if cell not in cell_map:
                     continue
-                auc_val = gdsc_response.loc[cell, gdsc_name] if gdsc_name in gdsc_response.columns else np.nan
+                auc_val = gdsc_response.loc[cell, drug]
                 if not np.isnan(auc_val):
                     cells_with_gdsc.append(cell_map[cell])
                     gdsc_aucs.append(auc_val)
@@ -234,7 +249,7 @@ def main():
             pr, _ = pearsonr(y_true, y_pred)
             sr, _ = spearmanr(y_true, y_pred)
             crossval_results.append({
-                "drug": prism_name,
+                "drug": drug,
                 "n_samples": len(y_true),
                 "pearson_r": pr,
                 "spearman_r": sr,
@@ -266,7 +281,7 @@ def main():
         logger.info("SAGE per-drug results not present, skipping SAGE/HGT comparison (not used in the paper)")
 
     models["HGT_300ep"] = valid
-    if len(shared_drugs_lower) >= 10:
+    if len(shared_drugs) >= 10:
         models["HGT_crossval_PRISM→GDSC"] = valid_cv
 
     for name, df in models.items():

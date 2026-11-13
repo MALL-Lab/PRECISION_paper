@@ -4,9 +4,10 @@ Within-subtype survival screens in SCAN-B: Basal alone and the Basal + HER2
 pool (Results, "within-subtype analysis", and Supplementary Figure on the
 ER-negative pool).
 
-Cohort definition (the one stated in the manuscript): samples with a
-prediction in the per-drug matrix and overall-survival follow-up, one sample
-per patient (the first one). Same test as the per-subtype screen of
+Cohort definition (the one stated in the manuscript): one sample per
+patient, the first in sample order as in script 21, restricted to samples
+with a prediction in the per-drug matrix and overall-survival follow-up.
+Same test as the per-subtype screen of
 scripts/18_strengthen_paper.py (test 3): for every drug, patients are split
 at the median predicted AUC and the two arms are compared with a log-rank
 test on overall survival, with Benjamini-Hochberg control over all tested
@@ -76,10 +77,17 @@ def screen(subset: pd.DataFrame, pred_df: pd.DataFrame) -> pd.DataFrame:
 def main() -> int:
     pred_df = pd.read_csv(RESULTS_DIR / "v5_final" / "scanb_perdrug_predictions.csv", index_col=0)
     clinical = pd.read_csv(DATA_DIR / "precision_processed" / "scanb_clinical.csv")
-    clinical = clinical.drop_duplicates(subset="sample_id")
-    cohort = clinical[clinical["sample_id"].isin(pred_df.index)]
-    cohort = cohort.dropna(subset=["os_time", "os_event"]).drop_duplicates(subset="patient_id")
-    cohort = cohort.set_index("sample_id")
+    # Same patient rule as script 21: first sample per patient in sample order,
+    # chosen before the survival filter, so that both analyses use one cohort.
+    # Filtering first kept a later sample of one patient whose first sample
+    # had no survival data (1,362 instead of 1,361 Basal or HER2 patients).
+    clinical = clinical.drop_duplicates(subset="sample_id").set_index("sample_id").sort_index()
+    clinical = clinical[~clinical["patient_id"].duplicated(keep="first")]
+    cohort = clinical[clinical.index.isin(pred_df.index)].copy()
+    cohort["os_time"] = pd.to_numeric(cohort["os_time"], errors="coerce")
+    cohort["os_event"] = pd.to_numeric(cohort["os_event"], errors="coerce")
+    cohort = cohort.dropna(subset=["os_time", "os_event"])
+    cohort = cohort[cohort["os_time"] > 0]
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     rows = []

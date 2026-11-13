@@ -12,6 +12,7 @@ from pathlib import Path
 from torch_geometric.data import HeteroData
 
 from config import DATA_DIR
+from src.data.drug_names import build_drug_index
 
 logger = logging.getLogger(__name__)
 
@@ -59,10 +60,18 @@ def graph_dict_to_hetero_data(graph: dict) -> HeteroData:
     return data
 
 
-def load_hetero_data(path: str | Path = DEFAULT_GRAPH_PATH) -> HeteroData:
-    """Load saved graph and convert to HeteroData."""
+def load_hetero_data(path: str | Path = DEFAULT_GRAPH_PATH
+                     ) -> HeteroData:
+    """Load saved graph and convert to HeteroData.
+
+    Drug node names are returned normalized to lowercase, like every response
+    matrix after normalize_drug_columns. The pickle keeps the original PRISM
+    spelling of 501 of them, and exact lookups used to miss those drugs.
+    """
     path = Path(path)
     logger.info("Loading graph from %s", path)
     with open(path, "rb") as f:
         graph = pickle.load(f)
-    return graph_dict_to_hetero_data(graph), graph["node_maps"]
+    node_maps = dict(graph["node_maps"])
+    node_maps["drug"] = build_drug_index(node_maps["drug"])
+    return graph_dict_to_hetero_data(graph), node_maps

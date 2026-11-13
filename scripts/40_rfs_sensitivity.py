@@ -9,7 +9,7 @@ genuinely related to tumour biology (not just end-of-life outcomes), it
 should replicate with RFS as outcome.
 
 This script duplicates the Cox multivariate PAM50-adjusted analysis for
-the 7 Table 5 candidates + 4 positive controls with RFS instead of OS.
+the 7 Table 5 candidates + 5 positive controls with RFS instead of OS.
 
 Outputs in paper/results/:
   cox_rfs_scanb.csv         - RFS Cox, PAM50-adjusted, penalizer=0.1
@@ -50,7 +50,7 @@ SEED = 42
 TARGETS = [
     "osimertinib", "saracatinib", "erlotinib", "brigatinib",
     "pelitinib", "entinostat", "trametinib",
-    "paclitaxel", "docetaxel", "epirubicin", "olaparib",
+    "paclitaxel", "docetaxel", "epirubicin", "olaparib", "talazoparib",
 ]
 
 

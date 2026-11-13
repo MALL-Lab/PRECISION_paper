@@ -145,7 +145,7 @@ def run_cohort_validation(cohort_name, tf_path, clinical_path,
     # First identify available clinical columns
     logger.info("  Clinical columns: %s", cohort_clin.columns.tolist()[:20])
 
-    # SCAN-B: TF index is long (S000001.l.r.m...), clinical is short (S000001)
+    # SCAN-B: TF index is long (sample code plus dotted suffixes), clinical is the code alone
     if cohort_name == "SCANB":
         cohort_tf["short_id"] = cohort_tf.index.str.replace(r"\..*", "", regex=True)
         cohort_tf = cohort_tf[~cohort_tf["short_id"].duplicated()]
@@ -231,6 +231,14 @@ def run_cohort_validation(cohort_name, tf_path, clinical_path,
     else:
         pam_cols = []
 
+    # Population of the PAM50-adjusted Cox models. Patients without a subtype were removed
+    # just above, so this is smaller than n_patients_with_survival, and it is the N that
+    # Table 2 reports because every hazard ratio below is fitted on it.
+    summary["n_patients_cox"] = int(len(merged))
+    summary["n_events_cox"] = int(merged["os_event"].sum())
+    logger.info("  Patients in the PAM50-adjusted Cox models: %d (events: %d)",
+                summary["n_patients_cox"], summary["n_events_cox"])
+
     # Penalized Cox per drug
     results = []
     for drug in pred_df.columns:
@@ -313,7 +321,7 @@ def meta_analysis(cohort_results):
 
         # Fisher's method: -2 * sum(log(p)) ~ chi2(2k)
         stat = -2 * sum(np.log(p) for p in pvals)
-        fisher_p = 1 - stats.chi2.cdf(stat, df=2 * len(pvals))
+        fisher_p = stats.chi2.sf(stat, df=2 * len(pvals))
         mean_hr = np.exp(np.mean(np.log(hrs)))  # geometric mean of HRs
 
         results.append({

@@ -145,9 +145,14 @@ def build_edge_indices(collectri: pd.DataFrame,
 def build_node_features(expression: pd.DataFrame,
                         tf_activities: pd.DataFrame,
                         node_maps: dict,
-                        drug_features: np.ndarray | None = None,
-                        train_cell_ids: list[str] | None = None) -> dict:
+                        drug_features: np.ndarray | None = None) -> dict:
     """Build feature matrices for each node type.
+
+    The gene and TF node features and the selection of the 500 most variable genes
+    are computed over every cell line of the graph, held-out lines included. They
+    are unsupervised and use no response (Methods, Heterogeneous biomedical
+    knowledge graph). The graph of the paper was built this way and is loaded from
+    its pickle, never rebuilt.
 
     Returns:
         Dict of node_type -> numpy feature matrix.
@@ -157,30 +162,21 @@ def build_node_features(expression: pd.DataFrame,
     tf_map = node_maps["tf"]
     cell_map = node_maps["cell_line"]
 
-    # Use only train cells for computing gene/TF static features (avoid leakage)
-    if train_cell_ids is not None:
-        expr_for_stats = expression.loc[[c for c in train_cell_ids if c in expression.index]]
-        tf_for_stats = tf_activities.loc[[c for c in train_cell_ids if c in tf_activities.index]]
-        logger.info("Node features computed from %d train cell lines only", len(expr_for_stats))
-    else:
-        expr_for_stats = expression
-        tf_for_stats = tf_activities
-
-    # Gene features: mean expression across train cell lines (static embedding)
+    # Gene features: mean expression across all cell lines (static embedding)
     gene_names = sorted(gene_map, key=gene_map.get)
-    gene_cols = [g for g in gene_names if g in expr_for_stats.columns]
+    gene_cols = [g for g in gene_names if g in expression.columns]
     full_gene_feat = np.zeros((len(gene_map), 1), dtype=np.float32)
     for g in gene_cols:
-        full_gene_feat[gene_map[g], 0] = expr_for_stats[g].mean()
+        full_gene_feat[gene_map[g], 0] = expression[g].mean()
     features["gene"] = full_gene_feat
     logger.info("Gene features: %s", full_gene_feat.shape)
 
-    # TF features: mean activity scores across train cell lines
+    # TF features: mean activity scores across all cell lines
     tf_names = sorted(tf_map, key=tf_map.get)
     tf_feat = np.zeros((len(tf_map), 1), dtype=np.float32)
     for tf in tf_names:
-        if tf in tf_for_stats.columns:
-            tf_feat[tf_map[tf], 0] = tf_for_stats[tf].mean()
+        if tf in tf_activities.columns:
+            tf_feat[tf_map[tf], 0] = tf_activities[tf].mean()
     features["tf"] = tf_feat
     logger.info("TF features: %s", tf_feat.shape)
 
@@ -188,9 +184,9 @@ def build_node_features(expression: pd.DataFrame,
     cell_names = sorted(cell_map, key=cell_map.get)
     shared_tfs = [tf for tf in tf_activities.columns if tf in tf_map]
 
-    # Select top 500 most variable genes (from train cells only to avoid leakage)
+    # Select the 500 most variable genes across all cell lines
     n_top_genes = 500
-    gene_var = expr_for_stats.var().sort_values(ascending=False)
+    gene_var = expression.var().sort_values(ascending=False)
     top_var_genes = [g for g in gene_var.head(n_top_genes).index if g in expression.columns]
 
     n_tf_feat = len(shared_tfs)
@@ -224,8 +220,7 @@ def build_graph(collectri: pd.DataFrame,
                 drug_response: pd.DataFrame,
                 expression: pd.DataFrame,
                 tf_activities: pd.DataFrame,
-                drug_features: np.ndarray | None = None,
-                train_cell_ids: list[str] | None = None) -> dict:
+                drug_features: np.ndarray | None = None) -> dict:
     """Build complete heterogeneous graph.
 
     Returns:
@@ -241,7 +236,7 @@ def build_graph(collectri: pd.DataFrame,
         collectri, string_ppi, drug_targets, drug_response, expression, node_maps
     )
 
-    features = build_node_features(expression, tf_activities, node_maps, drug_features, train_cell_ids)
+    features = build_node_features(expression, tf_activities, node_maps, drug_features)
 
     graph = {
         "node_maps": node_maps,

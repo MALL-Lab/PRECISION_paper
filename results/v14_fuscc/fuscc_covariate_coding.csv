@@ -1,0 +1,33 @@
+variable,raw_value,coded_value,n
+brca12_mut,0.0,0.0,192
+brca12_mut,1.0,1.0,22
+brca12_mut,missing,missing,142
+chemo,False,False,10
+chemo,True,True,335
+chemo,missing,missing,8
+chemo,unknown,unknown,3
+grade,2,2,64
+grade,2 to 3,2 to 3,29
+grade,3,3,230
+grade,missing,missing,33
+n_stage,0,0,213
+n_stage,1,1,90
+n_stage,1mi,1mi,3
+n_stage,2,2,31
+n_stage,3,3,17
+n_stage,missing,missing,2
+paclitaxel,False,not exposed,81
+paclitaxel,True,exposed,275
+radiotherapy,0.0,no,247
+radiotherapy,1.0,yes,108
+radiotherapy,missing,missing,1
+subtype_mrna,BLIS,BLIS,139
+subtype_mrna,IM,IM,86
+subtype_mrna,LAR,LAR,80
+subtype_mrna,MES,MES,51
+subtype_pam50,Basal,Basal,275
+subtype_pam50,Other,Other,81
+t_stage,1.0,1.0,130
+t_stage,2.0,2.0,216
+t_stage,3.0,3.0,9
+t_stage,missing,missing,1

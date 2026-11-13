@@ -6,10 +6,16 @@ The internal clinical review asked: why only PAM50-adjusted?
 Every oncologist reviewing this paper will ask about stage, tumor size,
 nodal status, age at diagnosis, ER/PR, treatment exposure.
 
-This script re-runs the Cox model for the 7 Table 5 candidates + 4 positive
+This script re-runs the Cox model for the 7 Table 5 candidates + 5 positive
 controls adjusting for the full clinical panel available per cohort:
   - SCAN-B:   predicted_auc + PAM50 + age + t.stage + grade + ER + PR + LN+
-  - METABRIC: predicted_auc + PAM50 + age + ER + HER2 + NPI + LN+
+  - METABRIC: predicted_auc + PAM50 + age + ER + HER2 (SNP6 copy-number gain) + NPI
+              + number of positive lymph nodes
+
+Missing receptor status is coded as negative. Until September 2026 the receptor columns
+were encoded with string tests that never matched the stored values, so ER and PR were
+constant and silently dropped. keep_covariates() now fails instead of dropping a declared
+covariate.
   - TCGA:     skipped (150 events, underpowered)
 
 Outputs in paper/results/:
@@ -39,11 +45,8 @@ from scipy import stats
 from sklearn.linear_model import Ridge
 from sklearn.preprocessing import QuantileTransformer, StandardScaler
 
-from config import DATA_DIR, RESULTS_DIR
-
-# Outputs go to RESULTS_DIR; generate_paper_results.py copies the comparison
-# table cited in the manuscript to paper/results/.
-OUT_DIR = RESULTS_DIR / "v8_multicohort"
+from config import DATA_DIR, RESULTS_DIR  # noqa: E402
+from src.data.clinical_encoding import encode_binary_receptor
 from src.data.drug_names import normalize_drug_columns
 from src.data.load_drug_response import load_prism_response
 from src.data.splits import cell_line_holdout_split, set_all_seeds
@@ -52,6 +55,7 @@ logging.basicConfig(level=logging.INFO,
                     format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("cox_clinical")
 
+OUT_DIR = RESULTS_DIR / "v8_multicohort"
 SEED = 42
 
 TARGETS = [
@@ -59,8 +63,23 @@ TARGETS = [
     "osimertinib", "saracatinib", "erlotinib", "brigatinib",
     "pelitinib", "entinostat", "trametinib",
     # Positive controls
-    "paclitaxel", "docetaxel", "epirubicin", "olaparib",
+    "paclitaxel", "docetaxel", "epirubicin", "olaparib", "talazoparib",
 ]
+
+# Covariates that Methods declare for each model. PAM50 and stage dummies are not listed
+# because a rare category can legitimately be constant.
+SCANB_COVARIATES = ["predicted_auc", "age", "grade", "lymphNodePos", "er_pos", "pr_pos"]
+METABRIC_COVARIATES = ["predicted_auc", "age", "ln_pos", "npi", "er_pos", "her2_pos"]
+
+
+def keep_covariates(cox_data: pd.DataFrame, required: list[str], cohort: str) -> pd.DataFrame:
+    """Drop constant columns, but fail if a declared covariate would be among them."""
+    constant = [c for c in cox_data.columns if cox_data[c].nunique() <= 1]
+    lost = [c for c in required if c in constant]
+    if lost:
+        raise ValueError(f"{cohort}: declared covariates are constant and would be "
+                         f"dropped from the model: {lost}")
+    return cox_data.drop(columns=constant)
 
 
 def predict_scanb():
@@ -175,8 +194,9 @@ def cox_scanb(preds_df):
                          dtype=int)
     stg = pd.get_dummies(merged["t.stage"], prefix="st", drop_first=True,
                          dtype=int)
-    er_b = (merged["er"].astype(str).str.upper().str.startswith("P")).astype(int)
-    pr_b = (merged["pr"].astype(str).str.upper().str.startswith("P")).astype(int)
+    # er and pr are stored as 1.0 and 0.0. Missing receptor status is coded as negative.
+    er_b = encode_binary_receptor(merged["er"]).fillna(0).astype(int)
+    pr_b = encode_binary_receptor(merged["pr"]).fillna(0).astype(int)
 
     base = pd.concat([
         merged[["os_time", "os_event", "age", "grade", "lymphNodePos"]],
@@ -198,8 +218,7 @@ def cox_scanb(preds_df):
         cox_data = cox_data.dropna()
         if len(cox_data) < 100:
             continue
-        non_const = cox_data.columns[cox_data.nunique() > 1]
-        cox_data = cox_data[non_const]
+        cox_data = keep_covariates(cox_data, SCANB_COVARIATES, "SCAN-B")
         try:
             cph = CoxPHFitter(penalizer=0.1)
             cph.fit(cox_data, duration_col="os_time", event_col="os_event")
@@ -236,7 +255,8 @@ def cox_metabric(preds_df):
 
     pam = pd.get_dummies(merged["PAM50"], prefix="sub", drop_first=True,
                          dtype=int)
-    er_b = (merged["ER_IHC"].astype(str).str.lower() == "pos").astype(int)
+    # ER_IHC reads "Positve", misspelled in cBioPortal. Missing status is coded as negative.
+    er_b = encode_binary_receptor(merged["ER_IHC"]).fillna(0).astype(int)
     her2_b = (merged["HER2_SNP6"].astype(str).str.upper()
               .isin(["GAIN", "AMP", "POSITIVE"])).astype(int)
 
@@ -258,8 +278,7 @@ def cox_metabric(preds_df):
         common = base.index.intersection(preds_df.index)
         cox_data = base.loc[common].copy()
         cox_data["predicted_auc"] = preds_df.loc[common, drug].values
-        non_const = cox_data.columns[cox_data.nunique() > 1]
-        cox_data = cox_data[non_const]
+        cox_data = keep_covariates(cox_data, METABRIC_COVARIATES, "METABRIC")
         try:
             cph = CoxPHFitter(penalizer=0.1)
             cph.fit(cox_data, duration_col="os_time", event_col="os_event")

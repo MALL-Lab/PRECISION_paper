@@ -1,0 +1,8 @@
+term,value_sequenced,value_other,p,note
+relapse risk of the sequenced patients,0.9157835601899401,1.0,0.7602621184278902,"hazard ratio [0.52, 1.61], the two groups are compared as they are"
+year of surgery,2013.0,2012.0,5.2973795812389495e-06,"median, Mann-Whitney"
+age,54.0,53.0,0.6500149132757729,"median, Mann-Whitney"
+tumour size (cm),2.5,2.5,0.27023928867465097,"median, Mann-Whitney"
+positive nodes,0.0,0.0,0.8359225487532503,"median, Mann-Whitney"
+relapse events,0.0,0.0,0.6731084606514095,"median, Mann-Whitney"
+mRNA subtype annotated,1.0,0.0,,the subtype is only defined where there is RNA-seq

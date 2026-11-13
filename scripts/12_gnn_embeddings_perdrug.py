@@ -1,23 +1,39 @@
 #!/usr/bin/env python3
 """
-PRECISION: GNN as feature extractor + per-drug predictor.
+PRECISION - GNN cell-line embeddings as features of per-drug Ridge models.
 
-Strategy: use the trained GNN encoder to generate cell line and drug
-embeddings that encode graph structure (PPI, TF-target, drug-target),
-then train per-drug Ridge/RF models on these embeddings.
+Loads the five SAGE models of Table 1 (scripts/57_train_gnns.py, seed-42
+cell-line split, initialization seeds 42, 123, 456, 789 and 1011, final-epoch
+weights), extracts the 128-dimensional cell-line embeddings of each one and
+fits one Ridge model per drug (alpha 100, standardized features) on the train
+cell lines of the same split, evaluated on its test cell lines. Cell lines
+receive no messages (response edges are outside message passing), so their
+embedding is the ReLU of a learned linear projection of their node features.
+This script used to train its own SAGE encoder, on which only 947 of the
+1,448 drugs reached training because of a drug-name case mismatch.
 
-If Ridge(GNN_embeddings) > Ridge(expression), the graph adds value.
+Rows of embedding_comparison.csv, all on the same split:
+1. Ridge(expression_19K)       - 19K raw gene features
+2. Ridge(TF_activities_771)    - 771 TF features
+3. Ridge(GNN_cell_emb_128)     - 128d cell embeddings of the SAGE model
+4. Ridge(expression+GNN_emb)   - both feature sets together (hybrid row of
+                                 Table 1)
+Rows 1 and 2 do not depend on the GNN and are fitted once (n_seeds 1, empty
+*_sd columns). Rows 3 and 4 are fitted on the embeddings of each of the five
+models: global_pearson, median_pearson, mean_pearson and pct_gt_03 are the
+mean over them, the *_sd columns their sample standard deviation (ddof 1) and
+n_seeds is 5.
 
-Comparison:
-1. Ridge(expression):          19K raw gene features
-2. RF(TF_activities):          771 TF features
-3. Ridge(GNN_cell_emb):        128d graph-informed cell embeddings
-4. Ridge(GNN_cell+drug_emb):   256d concatenated embeddings
-5. Ridge(expression + GNN_emb): combined features
+Outputs in results/v3_embeddings/:
+- embedding_comparison.csv: one row per feature set, sorted by median
+  per-drug Pearson.
+- embedding_comparison_per_seed.csv: rows 3 and 4 for each SAGE model.
+- per_drug_<feature set>.csv: per-drug test metrics. For rows 3 and 4 they
+  come from the canonical model (sage_split42_init42_full).
+- cell_line_embeddings.csv, drug_embeddings.csv: embeddings of the canonical
+  model, indexed by cell line and by lowercase drug name.
 
-All with same cell-line hold-out split.
-
-Run from project root:
+Run from project root, after scripts/57_train_gnns.py --set table1:
     python scripts/12_gnn_embeddings_perdrug.py
 """
 
@@ -28,20 +44,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # scripts/ -> package root
 
 import torch
-import torch.nn.functional as F
 import numpy as np
 import pandas as pd
 from scipy.stats import pearsonr, spearmanr
 from sklearn.linear_model import Ridge
-from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
 
-from config import DATA_DIR, RESULTS_DIR as RESULTS_ROOT
-from src.data.splits import set_all_seeds, cell_line_holdout_split
+from config import DATA_DIR, RESULTS_DIR as RESULTS_ROOT  # noqa: E402
+from src.data.splits import cell_line_holdout_split
 from src.data.drug_names import normalize_drug_columns
 from src.data.load_drug_response import load_prism_response
-from src.graph.hetero_data import load_hetero_data
-from src.models.hetero_gnn import HeteroGNNDrugResponse
+from src.models import training as T
 
 logging.basicConfig(
     level=logging.INFO,
@@ -50,85 +63,35 @@ logging.basicConfig(
 logger = logging.getLogger("gnn_emb")
 
 RESULTS_DIR = RESULTS_ROOT / "v3_embeddings"
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-SEED = 42
+SEED = 42  # split seed of the SAGE runs and of the Ridge models
+
+# SAGE runs of Table 1 (scripts/57_train_gnns.py) on the seed-42 split
+INIT_SEEDS = (42, 123, 456, 789, 1011)
+CANONICAL_INIT = 42  # sage_split42_init42_full
+METRICS = ["global_pearson", "median_pearson", "mean_pearson", "pct_gt_03"]
+COLUMNS = ["model", *METRICS, "n_drugs", *(f"{m}_sd" for m in METRICS), "n_seeds"]
 
 
-def train_gnn_encoder(data, node_maps, drug_response, train_cells, epochs=800):
-    """Train GNN and return the encoder (for embedding extraction)."""
-    from src.data.splits import split_response_edges
-
-    rk = ("cell_line", "responds_to", "drug")
-    mp_edges = {}
-    for et in data.edge_types:
-        if et == rk:
-            continue
-        mp_edges[et] = data[et].edge_index
-        s, r, d = et
-        mp_edges[(d, f"rev_{r}", s)] = data[et].edge_index.flip(0)
-
-    x_dict = {nt: data[nt].x for nt in data.node_types}
-    nfd = {nt: data[nt].x.shape[1] for nt in data.node_types}
-    n_drugs = len(node_maps["drug"])
-
-    # Only use train cell lines for GNN training
-    edges = split_response_edges(drug_response, node_maps, train_cells, [], DEVICE)
-
-    model = HeteroGNNDrugResponse(
-        node_feature_dims=nfd, hidden_dim=128, n_layers=3,
-        dropout=0.33, conv_type="sage",
-        edge_types=list(mp_edges.keys()), n_drugs=n_drugs,
-    ).to(DEVICE)
-
-    optimizer = torch.optim.Adam(model.parameters(), lr=1.3e-3, weight_decay=1e-4)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-5)
-
-    logger.info("Training GNN encoder (%d params, %d epochs, train cells only)...",
-                sum(p.numel() for p in model.parameters()), epochs)
-
-    for ep in range(1, epochs + 1):
-        model.train()
-        optimizer.zero_grad()
-        pred = model(x_dict, mp_edges, edges["train_cell"], edges["train_drug"])
-        loss = F.huber_loss(pred, edges["train_auc"])
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-
-        if ep % 200 == 0:
-            logger.info("  Epoch %d | loss=%.4f", ep, loss.item())
-
-    # Extract embeddings
-    model.eval()
+def extract_embeddings(model, graph, mp):
+    """Cell-line and drug embeddings of a trained model, as DataFrames."""
     with torch.no_grad():
-        h_dict = model.encode(x_dict, mp_edges)
+        h_dict = model.encode(graph.x_dict, mp)
 
-    cell_emb = h_dict["cell_line"].cpu().numpy()  # (n_cells, 128)
-    drug_emb = h_dict["drug"].cpu().numpy()        # (n_drugs, 128)
+    def _frame(ntype, prefix, node_map):
+        inv = {v: k for k, v in node_map.items()}
+        if sorted(inv) != list(range(len(inv))):
+            raise ValueError(f"{ntype} node indices are not 0..{len(inv) - 1}")
+        emb = h_dict[ntype].cpu().numpy()
+        return pd.DataFrame(emb, index=[inv[i] for i in range(len(inv))],
+                            columns=[f"{prefix}_{i}" for i in range(emb.shape[1])])
 
-    # Map to DataFrames with proper indices
-    inv_cell = {v: k for k, v in node_maps["cell_line"].items()}
-    inv_drug = {v: k for k, v in node_maps["drug"].items()}
-
-    cell_emb_df = pd.DataFrame(
-        cell_emb,
-        index=[inv_cell[i] for i in range(len(inv_cell))],
-        columns=[f"gnn_cell_{i}" for i in range(cell_emb.shape[1])],
-    )
-    drug_emb_df = pd.DataFrame(
-        drug_emb,
-        index=[inv_drug[i] for i in range(len(inv_drug))],
-        columns=[f"gnn_drug_{i}" for i in range(drug_emb.shape[1])],
-    )
-
-    logger.info("Cell embeddings: %s, Drug embeddings: %s",
-                cell_emb_df.shape, drug_emb_df.shape)
-    return model, cell_emb_df, drug_emb_df, mp_edges, x_dict
+    return (_frame("cell_line", "gnn_cell", graph.node_maps["cell_line"]),
+            _frame("drug", "gnn_drug", graph.node_maps["drug"]))
 
 
 def run_perdrug_comparison(features_dict, drug_response, train_cells, test_cells,
-                           drug_emb_df=None, min_samples=30):
-    """Run per-drug Ridge on multiple feature sets, optionally concatenating drug embeddings."""
+                           min_samples=30):
+    """Run per-drug Ridge on multiple feature sets."""
     results = {}
 
     for feat_name, features in features_dict.items():
@@ -160,20 +123,9 @@ def run_perdrug_comparison(features_dict, drug_response, train_cells, test_cells
             if tr_ok.sum() < min_samples or te_ok.sum() < 5:
                 continue
 
-            # Optionally concat drug embedding to cell features
-            if drug_emb_df is not None and drug in drug_emb_df.index:
-                drug_vec = drug_emb_df.loc[drug].values.reshape(1, -1)
-                drug_train = np.tile(drug_vec, (tr_ok.sum(), 1))
-                drug_test = np.tile(drug_vec, (te_ok.sum(), 1))
-                Xtr = np.hstack([X_train[tr_ok], drug_train])
-                Xte = np.hstack([X_test[te_ok], drug_test])
-            else:
-                Xtr = X_train[tr_ok]
-                Xte = X_test[te_ok]
-
             model = Ridge(alpha=100)
-            model.fit(Xtr, y_train[tr_ok])
-            pred = model.predict(Xte)
+            model.fit(X_train[tr_ok], y_train[tr_ok])
+            pred = model.predict(X_test[te_ok])
 
             pr, _ = pearsonr(y_test[te_ok], pred)
             sr, _ = spearmanr(y_test[te_ok], pred)
@@ -206,8 +158,14 @@ def run_perdrug_comparison(features_dict, drug_response, train_cells, test_cells
 
 
 def main():
+    # Checked before the Ridge fits so that a missing checkpoint stops the script at once
+    runs = [T.run_name("sage", SEED, s) for s in INIT_SEEDS]
+    missing = [r for r in runs
+               if not all((T.RUNS_DIR / f"{r}{ext}").exists() for ext in (".json", ".pt"))]
+    if missing:
+        raise FileNotFoundError(f"SAGE runs missing from {T.RUNS_DIR}: {missing}. "
+                                "Train them with scripts/57_train_gnns.py --set table1")
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    set_all_seeds(SEED)
 
     # ── Load data ─────────────────────────────────────────────────────────
     logger.info("Loading data...")
@@ -215,80 +173,77 @@ def main():
     expression = pd.read_csv(DATA_DIR / "PRISM/processed/counts_matched_prism.csv", index_col=0)
     tf_activities = pd.read_csv(DATA_DIR / "precision_processed/tf_activities_all_prism.csv", index_col=0)
 
-    train_cells, test_cells = cell_line_holdout_split(drug_response, test_frac=0.2, seed=SEED)
+    # The split the SAGE runs were trained on
+    train_cells, test_cells = cell_line_holdout_split(drug_response, test_frac=T.TEST_FRAC, seed=SEED)
 
-    # ── Train GNN and extract embeddings ──────────────────────────────────
+    # ── Feature sets that do not depend on the GNN ────────────────────────
     logger.info("=" * 60)
-    logger.info("TRAINING GNN ENCODER")
+    logger.info("PER-DRUG RIDGE WITHOUT GNN")
     logger.info("=" * 60)
-
-    data, node_maps = load_hetero_data()
-    data = data.to(DEVICE)
-
-    _, cell_emb, drug_emb, mp_edges, x_dict = train_gnn_encoder(
-        data, node_maps, drug_response, train_cells
+    fixed = run_perdrug_comparison(
+        {"Ridge(expression_19K)": expression, "Ridge(TF_activities_771)": tf_activities},
+        drug_response, train_cells, test_cells,
     )
 
-    cell_emb.to_csv(RESULTS_DIR / "cell_line_embeddings.csv")
-    drug_emb.to_csv(RESULTS_DIR / "drug_embeddings.csv")
+    # ── Embeddings of each trained SAGE model ─────────────────────────────
+    dev = T.device()
+    graph = T.load_graph(dev)
+    per_seed, per_drug = [], {}
+    for init_seed, run in zip(INIT_SEEDS, runs):
+        logger.info("=" * 60)
+        logger.info("PER-DRUG RIDGE ON THE EMBEDDINGS OF %s", run)
+        logger.info("=" * 60)
+        model, mp, _ = T.load_run("sage", SEED, init_seed, graph)
+        cell_emb, drug_emb = extract_embeddings(model, graph, mp)
+        del model
+        if init_seed == CANONICAL_INIT:
+            cell_emb.to_csv(RESULTS_DIR / "cell_line_embeddings.csv")
+            drug_emb.to_csv(RESULTS_DIR / "drug_embeddings.csv")
+            logger.info("Canonical embeddings: cells %s, drugs %s", cell_emb.shape, drug_emb.shape)
 
-    # ── Build feature sets ────────────────────────────────────────────────
-    logger.info("=" * 60)
-    logger.info("PER-DRUG COMPARISON")
-    logger.info("=" * 60)
-
-    # Combined: expression + GNN embeddings
-    shared_idx = sorted(set(expression.index) & set(cell_emb.index))
-    combined = pd.concat([expression.loc[shared_idx], cell_emb.loc[shared_idx]], axis=1)
-
-    features_dict = {
-        "Ridge(expression_19K)": expression,
-        "Ridge(TF_activities_771)": tf_activities,
-        "Ridge(GNN_cell_emb_128)": cell_emb,
-        "Ridge(expression+GNN_emb)": combined,
-    }
-
-    # Without drug embeddings first
-    logger.info("--- Without drug embeddings ---")
-    results_no_drug = run_perdrug_comparison(
-        features_dict, drug_response, train_cells, test_cells
-    )
-
-    # With drug embeddings concatenated
-    logger.info("\n--- With drug embeddings concatenated ---")
-    results_with_drug = run_perdrug_comparison(
-        {
-            "Ridge(GNN_cell+drug_emb)": cell_emb,
-            "Ridge(expr+GNN_cell+drug_emb)": combined,
-        },
-        drug_response, train_cells, test_cells, drug_emb_df=drug_emb,
-    )
+        shared_idx = sorted(set(expression.index) & set(cell_emb.index))
+        combined = pd.concat([expression.loc[shared_idx], cell_emb.loc[shared_idx]], axis=1)
+        res = run_perdrug_comparison(
+            {"Ridge(GNN_cell_emb_128)": cell_emb, "Ridge(expression+GNN_emb)": combined},
+            drug_response, train_cells, test_cells,
+        )
+        for name, r in res.items():
+            per_seed.append({"model": name, "run": run, "init_seed": init_seed,
+                             **{m: r[m] for m in METRICS}, "n_drugs": r["n_drugs"]})
+            if init_seed == CANONICAL_INIT:
+                per_drug[name] = r["per_drug"]
+    per_seed = pd.DataFrame(per_seed)
 
     # ── Summary ───────────────────────────────────────────────────────────
     logger.info("=" * 60)
     logger.info("FINAL COMPARISON")
     logger.info("=" * 60)
 
-    all_results = {**results_no_drug, **results_with_drug}
     summary = []
-    for name, r in sorted(all_results.items(), key=lambda x: -x[1]["median_pearson"]):
-        summary.append({
-            "model": name,
-            "global_pearson": r["global_pearson"],
-            "median_pearson": r["median_pearson"],
-            "mean_pearson": r["mean_pearson"],
-            "pct_gt_03": r["pct_gt_03"],
-            "n_drugs": r["n_drugs"],
-        })
-        r["per_drug"].to_csv(RESULTS_DIR / f"per_drug_{name.replace('/', '_')}.csv", index=False)
+    for name, r in fixed.items():
+        summary.append({"model": name, **{m: r[m] for m in METRICS},
+                        "n_drugs": r["n_drugs"], "n_seeds": 1})
+        per_drug[name] = r["per_drug"]
+    for name, g in per_seed.groupby("model", sort=False):
+        if g["n_drugs"].nunique() != 1:
+            raise ValueError(f"{name}: the number of drugs changes between SAGE models: "
+                             f"{dict(zip(g['run'], g['n_drugs']))}")
+        summary.append({"model": name, **{m: g[m].mean() for m in METRICS},
+                        "n_drugs": int(g["n_drugs"].iloc[0]),
+                        **{f"{m}_sd": g[m].std() for m in METRICS}, "n_seeds": len(g)})
 
-    summary_df = pd.DataFrame(summary)
+    summary_df = (pd.DataFrame(summary)[COLUMNS]
+                  .sort_values("median_pearson", ascending=False, ignore_index=True))
     summary_df.to_csv(RESULTS_DIR / "embedding_comparison.csv", index=False)
+    per_seed.to_csv(RESULTS_DIR / "embedding_comparison_per_seed.csv", index=False)
+    for name, pdf in per_drug.items():
+        pdf.to_csv(RESULTS_DIR / f"per_drug_{name.replace('/', '_')}.csv", index=False)
 
     for _, row in summary_df.iterrows():
-        logger.info("%-35s | global=%.4f | median=%.4f | >0.3: %.0f%%",
-                    row["model"], row["global_pearson"],
-                    row["median_pearson"], row["pct_gt_03"])
+        logger.info("%-35s | global=%.4f (sd %.4f) | median=%.4f (sd %.4f) | >0.3: %.0f%% | seeds=%d",
+                    row["model"], row["global_pearson"], row["global_pearson_sd"],
+                    row["median_pearson"], row["median_pearson_sd"], row["pct_gt_03"],
+                    row["n_seeds"])
 
     logger.info("DONE. Results in %s/", RESULTS_DIR)
 

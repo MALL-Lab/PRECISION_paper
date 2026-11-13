@@ -13,7 +13,7 @@ Outputs (results/v8_multicohort/):
     moa_enrichment.csv     classes with at least MIN_DRUGS_MOA annotated drugs
     target_enrichment.csv  targets with at least MIN_DRUGS_TARGET annotated drugs
 
-Both feed Supplementary Figures S6 and S7 (generate_paper_figures.py) and the
+Both feed Supplementary Figures 8 and 9 (generate_paper_figures.py) and the
 enrichment keys of paper_statistics.json.
 
 Usage: python scripts/52_drug_enrichment.py (paths from config.py)

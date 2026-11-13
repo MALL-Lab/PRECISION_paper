@@ -2,20 +2,36 @@
 """
 PRECISION - IG multi-seed stability.
 
-Runs Integrated Gradients with the canonical mean-train baseline on each
-of the three GNN models trained by script 34 (best_sage_seed{42,123,456}.pt).
-Compares TF rankings across seeds to determine whether IG is robust to
-GNN training variance (unlike ablation, which is not, see the script 34 report).
+Runs Integrated Gradients with the canonical mean-train baseline on the SAGE
+models of seeds 42, 123 and 456 trained by scripts/57_train_gnns.py
+(sage_split{S}_init{S}_full, loaded through the loader of script 32, which
+also checks that every drug was trained). Each seed sets both the cell-line
+split and the initialization, and the baseline of each model is the mean
+feature row over the training cell lines of its own split. Seed 42 is the
+canonical model of script 32, so tf_importance_ig_seed42.csv and
+tf_importance_ig_global.csv of script 32 come from the same checkpoint and
+the same attribution and must rank the TFs in the same order. Compares the TF
+rankings across seeds to determine whether IG is robust to GNN training
+variance.
 
 Scope per seed: 12 TNBC cells x 11 drugs, n_steps=50 (same as script 32).
 Time per seed: ~5 min on RTX 5060. Total ~15-20 min.
 
 Outputs in results/v4_xai/:
-  tf_importance_ig_seed{42,123,456}.csv
-  tf_importance_ig_multi_seed_stability.csv
+  tf_importance_ig_seed{42,123,456}.csv       tf, importance_mean, rank
+  tf_importance_ig_multi_seed_stability.csv   tf, rank_S and importance_mean_S
+                                              for each seed S, mean_rank,
+                                              in_top20_all_seeds
+  tf_importance_ig_seed_pairs.csv             one row per pair of seeds:
+                                              seed_a, seed_b, top20_overlap
+                                              (TFs shared by the two top 20),
+                                              spearman_rho (Spearman correlation
+                                              of the ranks over all TFs), n_tfs
+With --candidate-set extended the candidates are the 16 kinase or HDAC
+inhibitors of Supplementary Data 1 and every output is suffixed _extended.
 
 Run from project root:
-    python scripts/35_ig_multi_seed.py
+    python scripts/35_ig_multi_seed.py [--candidate-set table5|extended]
 """
 
 from __future__ import annotations
@@ -37,9 +53,8 @@ from config import RESULTS_DIR as RESULTS_ROOT
 from src.data.drug_names import normalize_drug_columns
 from src.data.load_depmap import load_model_info
 from src.data.load_drug_response import load_prism_response
-from src.data.splits import cell_line_holdout_split, set_all_seeds
-from src.graph.hetero_data import load_hetero_data
-from src.models.hetero_gnn import HeteroGNNDrugResponse
+from src.data.splits import set_all_seeds
+from src.models import training as T
 
 # Reuse helpers from script 32
 _spec = importlib.util.spec_from_file_location(
@@ -57,44 +72,18 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("ig_multi_seed")
 
 RESULTS_DIR = RESULTS_ROOT / "v4_xai"
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = T.device()
 N_STEPS = 50
+# Split and initialization seed of each SAGE model. Seed 42 is the canonical model.
 SEEDS = [42, 123, 456]
+TOP_K = 20
 
 # Candidate set: the seven drugs of Table 5 by default, or the extended set of
-# Supplementary Table S1 with --candidate-set extended (outputs suffixed).
+# Supplementary Data 1 with --candidate-set extended (outputs suffixed).
 CANDIDATES = list(_mod32.CANDIDATE_DRUGS)
 CONTROLS = list(_mod32.CONTROL_DRUGS)
 DRUGS = CANDIDATES + CONTROLS
 OUTPUT_SUFFIX = ""
-
-
-def load_model_for_seed(seed: int, data, node_maps):
-    """Instantiate SAGE architecture and load weights from best_sage_seed{N}.pt."""
-    x_dict = {nt: data[nt].x for nt in data.node_types}
-    nfd = {nt: data[nt].x.shape[1] for nt in data.node_types}
-    n_drugs = len(node_maps["drug"])
-
-    rk = ("cell_line", "responds_to", "drug")
-    mp_edges = {}
-    for et in data.edge_types:
-        if et == rk:
-            continue
-        mp_edges[et] = data[et].edge_index
-        s, r, d = et
-        mp_edges[(d, f"rev_{r}", s)] = data[et].edge_index.flip(0)
-
-    sage = HeteroGNNDrugResponse(
-        node_feature_dims=nfd, hidden_dim=128, n_layers=3,
-        dropout=0.33, conv_type="sage",
-        edge_types=list(mp_edges.keys()), n_drugs=n_drugs,
-    ).to(DEVICE)
-
-    state = torch.load(RESULTS_DIR / f"best_sage_seed{seed}.pt",
-                        map_location=DEVICE, weights_only=True)
-    sage.load_state_dict(state)
-    sage.eval()
-    return sage, x_dict, mp_edges
 
 
 def run_ig_for_seed(seed: int, sage, x_dict, mp_edges, cell_map, drug_map,
@@ -106,6 +95,8 @@ def run_ig_for_seed(seed: int, sage, x_dict, mp_edges, cell_map, drug_map,
         device=DEVICE, dtype=torch.long,
     )
     baseline_row = cell_feat[train_cell_idx].mean(dim=0).detach()
+    logger.info("  [seed=%d] baseline: mean over %d training cell lines of split %d",
+                seed, len(train_cell_idx), seed)
 
     records = []
     n_tfs = len(tf_names)
@@ -150,6 +141,26 @@ def aggregate_importance(full: pd.DataFrame) -> pd.DataFrame:
     return imp
 
 
+def seed_pair_table(per_seed_imp: dict, seeds: list, top_k: int = TOP_K) -> pd.DataFrame:
+    """Agreement between the TF rankings of each pair of seeds: the number of
+    TFs shared by the two top-k lists and the Spearman correlation of the
+    ranks over every TF ranked by both."""
+    rows = []
+    for i, a in enumerate(seeds):
+        for b in seeds[i + 1:]:
+            ta = set(per_seed_imp[a].head(top_k)["tf"])
+            tb = set(per_seed_imp[b].head(top_k)["tf"])
+            m = per_seed_imp[a][["tf", "rank"]].merge(
+                per_seed_imp[b][["tf", "rank"]], on="tf",
+                suffixes=(f"_{a}", f"_{b}"),
+            )
+            rho, _ = spearmanr(m[f"rank_{a}"], m[f"rank_{b}"])
+            rows.append({"seed_a": a, "seed_b": b,
+                         f"top{top_k}_overlap": len(ta & tb),
+                         "spearman_rho": float(rho), "n_tfs": len(m)})
+    return pd.DataFrame(rows)
+
+
 def _parse_args():
     import argparse
     ap = argparse.ArgumentParser(description="IG multi-seed stability")
@@ -164,18 +175,19 @@ def main() -> int:
     DRUGS = CANDIDATES + CONTROLS
     OUTPUT_SUFFIX = "" if args.candidate_set == "table5" else f"_{args.candidate_set}"
     logger.info("Candidate set %s: %d drugs", args.candidate_set, len(DRUGS))
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     set_all_seeds(42)
     drug_response = normalize_drug_columns(load_prism_response(use_processed=True))
     model_info = load_model_info()
-    data, node_maps = load_hetero_data()
-    data = data.to(DEVICE)
+    graph = T.load_graph(DEVICE)
+    x_dict = graph.x_dict
 
-    # Get TNBC cells (must match training split, but we use all TNBC here;
-    # script 32 confirmed these 12 are in the graph)
-    cell_map = node_maps["cell_line"]
-    drug_map = node_maps["drug"]
+    # The same 12 TNBC cell lines as script 32 for every seed, whether they
+    # fall in the training or the test cell lines of that seed's split.
+    cell_map = graph.node_maps["cell_line"]
+    drug_map = graph.node_maps["drug"]
     CANDIDATES = _mod32.match_graph_drug_names(CANDIDATES, drug_map)
-    DRUGS = CANDIDATES + CONTROLS
+    DRUGS = CANDIDATES + _mod32.match_graph_drug_names(CONTROLS, drug_map)
     tnbc_cell_ids = identify_tnbc_cells(model_info, drug_response, cell_map)
     tf_names = load_tf_names()
 
@@ -185,11 +197,9 @@ def main() -> int:
         logger.info("=" * 70)
         logger.info("IG for SEED = %d", seed)
         logger.info("=" * 70)
-        # Train/test split for this seed (just to use train_cells for baseline)
-        train_cells, _ = cell_line_holdout_split(
-            drug_response, test_frac=0.2, seed=seed,
-        )
-        sage, x_dict, mp_edges = load_model_for_seed(seed, data, node_maps)
+        # Model of this split and init seed, and the training cell lines of
+        # its split for the mean-train baseline.
+        sage, mp_edges, train_cells = _mod32.load_ig_model(graph, seed, seed, drug_response)
         full = run_ig_for_seed(
             seed, sage, x_dict, mp_edges, cell_map, drug_map,
             tnbc_cell_ids, tf_names, train_cells,
@@ -223,17 +233,12 @@ def main() -> int:
     logger.info("TFs in top-20 across ALL 3 seeds: %d", n_all)
     logger.info("  %s", stab[stab["in_top20_all_seeds"]]["tf"].tolist())
 
-    for i, a in enumerate(SEEDS):
-        for b in SEEDS[i+1:]:
-            ta = set(per_seed_imp[a].head(20)["tf"])
-            tb = set(per_seed_imp[b].head(20)["tf"])
-            m = per_seed_imp[a][["tf", "rank"]].merge(
-                per_seed_imp[b][["tf", "rank"]], on="tf",
-                suffixes=(f"_{a}", f"_{b}"),
-            )
-            rho, _ = spearmanr(m[f"rank_{a}"], m[f"rank_{b}"])
-            logger.info("  seeds %d vs %d: top20 overlap=%d/20  Spearman=%.3f",
-                        a, b, len(ta & tb), rho)
+    pairs = seed_pair_table(per_seed_imp, SEEDS)
+    pairs.to_csv(RESULTS_DIR / f"tf_importance_ig_seed_pairs{OUTPUT_SUFFIX}.csv", index=False)
+    for _, r in pairs.iterrows():
+        logger.info("  seeds %d vs %d: top%d overlap=%d/%d  Spearman=%.3f (%d TFs)",
+                    r["seed_a"], r["seed_b"], TOP_K, r[f"top{TOP_K}_overlap"], TOP_K,
+                    r["spearman_rho"], r["n_tfs"])
 
     logger.info("DONE")
     return 0

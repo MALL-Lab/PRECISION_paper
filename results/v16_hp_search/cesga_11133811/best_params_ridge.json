@@ -1,0 +1,55 @@
+{
+  "model": "ridge",
+  "best_trial": 1,
+  "best_params": {
+    "alpha": 506.1576888752306
+  },
+  "best_cv_mean": 0.1622227392400422,
+  "chosen_params": {
+    "alpha": 506.0
+  },
+  "chosen_cv_mean": 0.16222139910590908,
+  "chosen_cv_sd": 0.01548874077206279,
+  "chosen_fold_medians": [
+    0.1392805266749971,
+    0.15820199811100463,
+    0.1607228593287513,
+    0.1786832376372447,
+    0.17421837377754754
+  ],
+  "edge_diagnostic": [
+    {
+      "param": "alpha",
+      "best": 506.1576888752306,
+      "probe": 3162.2776601683795,
+      "cv_mean": 0.17685307759273639,
+      "cv_sd": 0.021104271840610412
+    }
+  ],
+  "design": {
+    "n_folds": 5,
+    "n_trials": 10,
+    "n_objective_drugs": 200,
+    "seed": 42,
+    "min_fit": 30,
+    "min_eval": 5,
+    "sampler": "TPESampler(seed=42)",
+    "official": true
+  },
+  "bundle_sha256": {
+    "response_train.csv.gz": "5bdd2cd81d6f2ae1fcc5e11fa8ab98b76afa9198b6d2295d248ef296e08d2874",
+    "expression_train.csv.gz": "82cf25a37976602c64a3ce629eb72cef8480f1726f20dd7e5e73e9b9c302f37e",
+    "tf_train.csv.gz": "c3dd85ea1bafd55767e525f8a00bd75bd2f93120b16ec769a91eafc72334f9d2",
+    "folds.csv": "8a3f9b9764b4f04a635bf8d732d51992c33da752be69a7a799c535198f84697b"
+  },
+  "bundle_git_commit": "e17130e9c295b26eaa0ce9f18d167be9af8a9d19",
+  "environment": {
+    "python": "3.12.16",
+    "numpy": "2.4.3",
+    "pandas": "2.2.3",
+    "scipy": "1.17.1",
+    "scikit-learn": "1.8.0",
+    "host": "c202-3",
+    "optuna": "4.8.0"
+  }
+}

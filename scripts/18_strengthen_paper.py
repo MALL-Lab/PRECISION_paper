@@ -144,9 +144,11 @@ def test2_gnn_embeddings_transfer():
 
     shared_tfs = sorted(set(tf_activities.columns) & set(scanb_tf.columns))
 
-    # Batch correction
+    # Batch correction: QuantileTransformer fitted on the training cell lines only,
+    # as in the canonical transfer (scripts 17, 21 and 22)
     qt = QuantileTransformer(output_distribution="normal", random_state=SEED)
-    prism_tf_qt = pd.DataFrame(qt.fit_transform(tf_activities[shared_tfs]),
+    qt.fit(tf_activities.loc[[c for c in train_cells if c in tf_activities.index], shared_tfs])
+    prism_tf_qt = pd.DataFrame(qt.transform(tf_activities[shared_tfs]),
                                index=tf_activities.index, columns=shared_tfs)
     scanb_tf_qt = pd.DataFrame(qt.transform(scanb_tf[shared_tfs]),
                                index=scanb_tf.index, columns=shared_tfs)

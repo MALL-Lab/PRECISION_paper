@@ -27,6 +27,24 @@ Outputs in results/v8_multicohort/:
   pca_residualization_summary.csv
   pca_residualization_perdrug.csv
 
+Second output, results/v13_reaudit/pc1_orientation.csv (metric, value), which
+says what PC1 is. The sign of a principal component is arbitrary, so the PC1
+score is oriented to correlate positively with the predicted AUC of paclitaxel
+(pc1_sign_flipped = 1 means the raw score was multiplied by -1). A higher
+oriented score therefore means a higher predicted AUC, i.e. predicted more
+resistant to paclitaxel. The file reports the Pearson correlation of the
+oriented score with the SCAN-B TF activities of E2F1, MYC, TP53 and ESR1
+(data/precision_processed/tf_activities_scanb.csv, same patients) and with the
+predicted AUC of talazoparib and olaparib, the Cox Wald z of the oriented score
+(same model as the PC1 survival test above), the variance explained by PC2, and
+the mean signed and mean absolute inter-drug correlation of the predictions with
+the percentage of drug pairs whose correlation is negative. Before writing it
+the script reproduces published numbers and raises if they differ: the
+PAM50-adjusted Cox cohort of script 21 (7,215 patients, 1,164 events), the
+mean inter-drug correlation (0.073), the PC1 variance (12.0%) and the Cox
+p-values of paclitaxel and erlotinib in results/v8_multicohort/survival_SCANB.csv.
+This second output adds nothing to the two files above, which stay byte-identical.
+
 Run from project root:
     python scripts/42_pca_residualization.py
 """
@@ -34,6 +52,7 @@ Run from project root:
 from __future__ import annotations
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -58,9 +77,23 @@ PRED_PATH = RESULTS_DIR / "v5_final" / "scanb_perdrug_predictions.csv"
 SEED = 42
 N_TOP = 200  # "200 tested" subset = top-200 by prediction variance
 
+# Second output (PC1 orientation), see the module docstring.
+REAUDIT = RESULTS_DIR / "v13_reaudit"
+TF_PATH = DATA / "precision_processed/tf_activities_scanb.csv"
+SURV_REF_PATH = RESULTS / "survival_SCANB.csv"  # script 21
+ORIENT_DRUG = "paclitaxel"
+PARP_DRUGS = ["talazoparib", "olaparib"]
+TFS_OF_INTEREST = ["E2F1", "MYC", "TP53", "ESR1"]
+EXPECTED_N_PATIENTS = 7215      # PAM50-adjusted SCAN-B Cox cohort of script 21
+EXPECTED_N_EVENTS = 1164
+EXPECTED_CORR_MEAN = 0.073      # mean signed inter-drug correlation, 3 decimals
+EXPECTED_PC1_VAR_PCT = 12.0     # PC1 explained variance, 1 decimal
+REF_P_DRUGS = ["paclitaxel", "erlotinib"]
+P_RTOL = 1e-6
+
 
 def load_matrix():
-    """Patient-level prediction matrix + OS + PAM50 (same prep as script 38)."""
+    """Patient-level prediction matrix + OS + PAM50: one row per patient, PAM50 known, OS time > 0."""
     preds = pd.read_csv(PRED_PATH, index_col=0)
     logger.info("Raw predictions: %d samples x %d drugs", *preds.shape)
 
@@ -81,9 +114,9 @@ def load_matrix():
     return X, surv
 
 
-def cox_pvalue(covariate: np.ndarray, surv: pd.DataFrame,
-               pam_dummies: pd.DataFrame) -> float:
-    """Penalized Cox (0.1) of OS on covariate + PAM50; return covariate p."""
+def cox_stats(covariate: np.ndarray, surv: pd.DataFrame,
+              pam_dummies: pd.DataFrame) -> tuple[float, float]:
+    """Penalized Cox (0.1) of OS on covariate + PAM50; return covariate p and Wald z."""
     cd = pd.DataFrame({
         "os_time": surv["os_time"].values,
         "os_event": surv["os_event"].values,
@@ -91,13 +124,116 @@ def cox_pvalue(covariate: np.ndarray, surv: pd.DataFrame,
     }, index=surv.index)
     cd = pd.concat([cd, pam_dummies], axis=1).dropna()
     if cd["x"].nunique() < 3:
-        return np.nan
+        return np.nan, np.nan
     try:
         cph = CoxPHFitter(penalizer=0.1)
         cph.fit(cd, duration_col="os_time", event_col="os_event")
-        return float(cph.summary.loc["x", "p"])
+        return float(cph.summary.loc["x", "p"]), float(cph.summary.loc["x", "z"])
     except Exception:
-        return np.nan
+        return np.nan, np.nan
+
+
+def cox_pvalue(covariate: np.ndarray, surv: pd.DataFrame,
+               pam_dummies: pd.DataFrame) -> float:
+    """Penalized Cox (0.1) of OS on covariate + PAM50; return covariate p."""
+    return cox_stats(covariate, surv, pam_dummies)[0]
+
+
+def pc1_orientation(X: pd.DataFrame, surv: pd.DataFrame, pam_dummies: pd.DataFrame,
+                    pca: PCA, pc1_score: np.ndarray, pc1_z: float,
+                    corr: pd.DataFrame, mean_corr: float) -> pd.DataFrame:
+    """Orient PC1 on paclitaxel and describe it (second output, see docstring).
+
+    corr is the inter-drug correlation matrix of main() with its diagonal set to
+    NaN. Raises if the reproduced reference numbers differ from the published ones.
+    """
+    # ---- Reproduction of published numbers ------------------------------
+    n_pat, n_ev = X.shape[0], int(surv["os_event"].sum())
+    if (n_pat, n_ev) != (EXPECTED_N_PATIENTS, EXPECTED_N_EVENTS):
+        raise RuntimeError(f"Cox cohort is {n_pat} patients / {n_ev} events, expected "
+                           f"{EXPECTED_N_PATIENTS} / {EXPECTED_N_EVENTS}")
+    if round(mean_corr, 3) != EXPECTED_CORR_MEAN:
+        raise RuntimeError(f"Mean inter-drug correlation {mean_corr:.4f} does not "
+                           f"reproduce {EXPECTED_CORR_MEAN}")
+    pc1_var_pct = round(100 * float(pca.explained_variance_ratio_[0]), 1)
+    if pc1_var_pct != EXPECTED_PC1_VAR_PCT:
+        raise RuntimeError(f"PC1 explains {pc1_var_pct}%, expected {EXPECTED_PC1_VAR_PCT}%")
+    ref = pd.read_csv(SURV_REF_PATH).set_index("drug")
+    for drug in REF_P_DRUGS:
+        p_here = cox_pvalue(X[drug].values, surv, pam_dummies)
+        p_ref = float(ref.loc[drug, "pvalue"])
+        if not np.isclose(p_here, p_ref, rtol=P_RTOL, atol=0):
+            raise RuntimeError(f"{drug} Cox p {p_here:.6g} does not reproduce "
+                               f"{p_ref:.6g} of {SURV_REF_PATH}")
+        logger.info("Reproduced %s Cox p = %.6g (survival_SCANB.csv %.6g)",
+                    drug, p_here, p_ref)
+    logger.info("Reproduced cohort %d / %d, mean inter-drug r = %.4f, PC1 = %.1f%%",
+                n_pat, n_ev, mean_corr, pc1_var_pct)
+
+    # ---- Orientation on paclitaxel --------------------------------------
+    raw_r = float(np.corrcoef(pc1_score, X[ORIENT_DRUG].values)[0, 1])
+    sign = 1.0 if raw_r >= 0 else -1.0
+    pc1_oriented = pd.Series(sign * pc1_score, index=X.index, name="pc1_oriented")
+    logger.info("PC1 raw r with %s AUC = %.4f, sign flipped: %s",
+                ORIENT_DRUG, raw_r, sign < 0)
+
+    rows = [
+        {"metric": "n_patients", "value": n_pat},
+        {"metric": "n_events", "value": n_ev},
+        {"metric": "pc1_explained_var_pct", "value": pc1_var_pct},
+        {"metric": "pc2_explained_var_pct",
+         "value": round(100 * float(pca.explained_variance_ratio_[1]), 2)},
+        {"metric": f"pc1_raw_corr_{ORIENT_DRUG}_auc", "value": round(raw_r, 4)},
+        {"metric": "pc1_sign_flipped", "value": int(sign < 0)},
+    ]
+    for drug in [ORIENT_DRUG] + PARP_DRUGS:
+        r = float(pc1_oriented.corr(X[drug]))
+        rows.append({"metric": f"pc1_oriented_corr_{drug}_auc", "value": round(r, 4)})
+        logger.info("Oriented PC1 vs %s predicted AUC: r = %.4f", drug, r)
+
+    # ---- TF activities of the same patients ------------------------------
+    tf = pd.read_csv(TF_PATH, index_col=0,
+                     usecols=lambda c: c in ["", "Unnamed: 0"] + TFS_OF_INTEREST)
+    missing = X.index.difference(tf.index)
+    if len(missing):
+        raise RuntimeError(f"{len(missing)} Cox patients have no SCAN-B TF activities")
+    tf = tf.loc[X.index]
+    for name in TFS_OF_INTEREST:
+        r = float(pc1_oriented.corr(tf[name]))
+        rows.append({"metric": f"pc1_oriented_corr_tf_{name}", "value": round(r, 4)})
+        logger.info("Oriented PC1 vs %s TF activity: r = %.4f", name, r)
+
+    # ---- Survival of the oriented score ----------------------------------
+    p_or, z_or = cox_stats(pc1_oriented.values, surv, pam_dummies)
+    if not np.isclose(abs(z_or), abs(pc1_z), rtol=1e-6):
+        raise RuntimeError(f"Oriented PC1 |z| {abs(z_or):.4f} differs from the "
+                           f"unoriented |z| {abs(pc1_z):.4f}")
+    rows.append({"metric": "pc1_oriented_survival_z", "value": round(z_or, 3)})
+    logger.info("Oriented PC1 ~ OS (PAM50-adjusted Cox): z = %.3f, p = %.3g", z_or, p_or)
+
+    # ---- Inter-drug correlation: sign and magnitude over unique pairs ----
+    iu = np.triu_indices(corr.shape[0], k=1)
+    pairs = corr.values[iu]
+    pairs = pairs[~np.isnan(pairs)]
+    # The off-diagonal mean of main() must equal the mean over unique pairs.
+    if not np.isclose(float(np.mean(pairs)), mean_corr, rtol=0, atol=1e-9):
+        raise RuntimeError(f"Mean over unique pairs {np.mean(pairs):.6f} differs from "
+                           f"the off-diagonal mean {mean_corr:.6f}")
+    rows += [
+        {"metric": "inter_drug_corr_mean", "value": round(mean_corr, 4)},
+        {"metric": "inter_drug_abs_corr_mean", "value": round(float(np.mean(np.abs(pairs))), 4)},
+        {"metric": "n_drug_pairs", "value": int(pairs.size)},
+        {"metric": "pct_drug_pairs_negative_corr",
+         "value": round(100 * float(np.mean(pairs < 0)), 2)},
+    ]
+    logger.info("Inter-drug pairs: %d, mean |r| = %.4f, %.2f%% negative",
+                pairs.size, np.mean(np.abs(pairs)), 100 * np.mean(pairs < 0))
+
+    out = pd.DataFrame(rows)
+    os.makedirs(REAUDIT, exist_ok=True)
+    out.to_csv(REAUDIT / "pc1_orientation.csv", index=False)
+    logger.info("Wrote %s\n%s", REAUDIT / "pc1_orientation.csv", out.to_string(index=False))
+    return out
 
 
 def main():
@@ -127,9 +263,9 @@ def main():
                 [f"{v:.3f}" for v in pca.explained_variance_ratio_[:5]])
 
     # ---- PC1 vs survival ------------------------------------------------
-    pc1_p = cox_pvalue(pc1_score, surv, pam_dummies)
-    logger.info("PC1 ~ OS (PAM50-adjusted Cox): p=%.4f  -> %s",
-                pc1_p, "assoc" if pc1_p < 0.05 else "NOT associated")
+    pc1_p, pc1_z = cox_stats(pc1_score, surv, pam_dummies)
+    logger.info("PC1 ~ OS (PAM50-adjusted Cox): z=%.2f, p=%.3g  -> %s",
+                pc1_z, pc1_p, "assoc" if pc1_p < 0.05 else "NOT associated")
 
     # ---- Per-drug nominal association before/after PC1 residualization --
     # Select "200 tested" = top-200 drugs by prediction variance.
@@ -181,13 +317,19 @@ def main():
         {"metric": "inter_drug_corr_mean", "value": round(mean_corr, 4)},
         {"metric": "inter_drug_corr_median", "value": round(med_corr, 4)},
         {"metric": "pc1_explained_var_pct", "value": round(100 * pc1_var, 1)},
-        {"metric": "pc1_survival_pvalue", "value": round(pc1_p, 4)},
+        # Unrounded, so that the threshold quoted in the text can be checked.
+        # The p-value underflows to 0 for very large |z|, hence the Wald z too.
+        {"metric": "pc1_survival_pvalue", "value": pc1_p},
+        {"metric": "pc1_survival_z", "value": round(pc1_z, 3)},
         {"metric": "n_tested", "value": N_TOP},
         {"metric": "n_nominal_sig_raw", "value": n_raw_sig},
         {"metric": "n_nominal_sig_residualized", "value": n_res_sig},
     ])
     summary.to_csv(RESULTS / "pca_residualization_summary.csv", index=False)
     logger.info("\n%s", summary.to_string(index=False))
+
+    # ---- Second output: what PC1 is (after the two files above) ---------
+    pc1_orientation(X, surv, pam_dummies, pca, pc1_score, pc1_z, corr, mean_corr)
     logger.info("DONE")
 
 

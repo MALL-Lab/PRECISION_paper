@@ -15,6 +15,8 @@ import pandas as pd
 import torch
 import logging
 
+from src.data.drug_names import build_drug_index, normalize_drug_name
+
 logger = logging.getLogger(__name__)
 
 SEED = 42
@@ -76,22 +78,29 @@ def split_response_edges(drug_response: pd.DataFrame,
 
     Returns:
         Dict with train_cell, train_drug, train_auc, test_cell, test_drug, test_auc.
+
+    Raises:
+        ValueError: if a drug of the response matrix has no graph node. Such
+            drugs used to be skipped without warning, which dropped the 501
+            drugs whose node names keep upper-case letters.
     """
     cell_map = node_maps["cell_line"]
-    drug_map = node_maps["drug"]
+    drug_index = build_drug_index(node_maps["drug"])
+    missing = [d for d in drug_response.columns if normalize_drug_name(d) not in drug_index]
+    if missing:
+        raise ValueError(f"{len(missing)} drugs have no graph node: {missing[:10]}")
+    drug_nodes = {d: drug_index[normalize_drug_name(d)] for d in drug_response.columns}
 
     def _extract_edges(cell_ids):
         cells, drugs, aucs = [], [], []
         for cell in cell_ids:
             if cell not in cell_map:
                 continue
-            for drug in drug_response.columns:
-                if drug not in drug_map:
-                    continue
+            for drug, node in drug_nodes.items():
                 auc = drug_response.loc[cell, drug]
                 if pd.notna(auc):
                     cells.append(cell_map[cell])
-                    drugs.append(drug_map[drug])
+                    drugs.append(node)
                     aucs.append(auc)
         return (torch.tensor(cells, device=device),
                 torch.tensor(drugs, device=device),

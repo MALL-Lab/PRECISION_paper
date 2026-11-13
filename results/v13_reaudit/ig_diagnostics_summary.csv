@@ -1,0 +1,47 @@
+metric,value
+n_tnbc_ig_lines,12
+n_drugs,11
+n_fig3c_cells,220
+dx_min_threshold,1e-08
+n_tf_line_small_dx_top20,0
+n_tf_drug_line_skipped_top20,0
+n_tf_line_small_dx_all_771,0
+n_fig3c_cells_attr_sign_ne_grad_sign,77
+n_fig3c_cells_disagree_with_negative_mean_dx,77
+n_fig3c_cells_grad_sign_same_all_lines,220
+n_top20_tfs_negative_mean_dx,7
+n_top20_tfs_with_any_disagreement,7
+top20_tfs_with_disagreement,"ZEB1, ZNF362, RUNX2, HOXB9, LHX1, ARID1A, HIVEP1"
+n_top20_tfs_disagree_all_11_drugs,7
+n_top20_tfs_grad_sign_same_all_drugs,20
+n_top20_tfs_majority_grad_positive,10
+n_top20_tfs_majority_grad_negative,10
+top20_tfs_majority_grad_positive,"RELA, ZEB1, IRX1, BARX1, RUNX2, NFKBIZ, HOXB9, ARID1A, E2F1, HIVEP1"
+top20_tfs_majority_grad_negative,"HOXB7, ZNF362, AEBP1, MZF1, ZBTB7B, HIVEP2, SPDEF, TET1, LHX1, JUND"
+n_top20_tfs_majority_grad_ne_majority_attr,7
+gradcheck_drugs,"erlotinib, epirubicin"
+gradcheck_n_pairs,24
+gradcheck_attr_max_rel_diff,3.803797282521112e-07
+gradcheck_grad_max_rel_diff_all_tfs,2.6291047803265736e-07
+gradcheck_grad_sign_agree_all_tfs,18504 of 18504
+gradcheck_ZEB1_sign_agree_division_autograd,24 of 24
+gradcheck_ZEB1_grad_negative_pairs,0
+gradcheck_ZEB1_local_grad_at_input_negative_pairs,0
+gradcheck_ZEB1_local_grad_at_baseline_negative_pairs,0
+gradcheck_completeness_max_abs_delta,0.0008295685650363746
+gradcheck_mean_share_abs_attr_tf_dims,0.2616858022331819
+cross_drug_mean_pairwise_pearson,0.9682722468796838
+cross_drug_min_pairwise_pearson,0.8363219361351372
+cross_drug_max_pairwise_pearson,0.9999907364240544
+cross_drug_n_pairs,55
+cross_drug_n_tfs,771
+n_ig_lines_train,8
+n_ig_lines_test,4
+ig_lines_train,"ACH-000212 (CAL120), ACH-000288 (BT549), ACH-000573 (MDAMB436), ACH-000624 (HCC1806), ACH-000721 (HMC18), ACH-000768 (MDAMB231), ACH-000849 (MDAMB468), ACH-000856 (CAL51)"
+ig_lines_test,"ACH-000223 (HCC1937), ACH-000276 (HCC38), ACH-000374 (HCC1143), ACH-000643 (HDQP1)"
+ig_multi_seed_seeds,"42, 123, 456"
+n_tfs_top20_any_seed,44
+tfs_top20_any_seed,"AEBP1, ARID1A, ASXL1, BARX1, CREB3L1, E2F1, FOXP2, HIVEP1, HIVEP2, HOPX, HOXB7, HOXB9, HR, HTATIP2, IRF3, IRF6, IRX1, JUND, KLF12, KLF8, LHX1, LHX8, MEIS2, MSX1, MZF1, NFKBIZ, PROX1, REL, RELA, RFX1, RFX5, RUNX2, SALL1, SETBP1, SMAD6, SOX4, SPDEF, STAT2, TET1, TFAP2B, ZBTB7B, ZEB1, ZNF362, ZXDC"
+seed42_median_pearson_SAGE,0.036177002
+seed42_median_pearson_HGT,0.0486093
+seed42_median_pearson_Ridge_expr_GNN_emb,0.1111183306924111

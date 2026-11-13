@@ -11,6 +11,10 @@ This script is reproducible and writes three output CSVs:
 - cox_multivar_pam50_adjusted.csv  (canonical: penalizer=0.1, cited in paper)
 - cox_multivar_pam50_pen05.csv     (sensitivity: penalizer=0.5)
 - cox_multivar_pam50_pen001.csv    (near-unpenalized replica, internal check)
+and two records of the fits, so that a Cox fit that fails cannot shrink the
+denominator of the Benjamini-Hochberg correction without trace:
+- cox_multivar_pam50_fit_summary.csv  (per penalizer: drugs predicted, fitted, failed)
+- cox_multivar_pam50_failures.csv     (one row per failed fit, empty when none fails)
 
 Dependencies:
 - SCAN-B TF activities   (data/precision_processed/tf_activities_scanb.csv)
@@ -98,7 +102,10 @@ def fit_predictions(train_tf, train_resp, cohort_tf, shared_tfs, alpha=100):
 
 
 def run_cox_multivar(pred_df, clin, pam_col, penalizer):
-    """Run penalized Cox per drug, adjusted for PAM50 dummies."""
+    """Run penalized Cox per drug, adjusted for PAM50 dummies.
+
+    Returns the per-drug table, the failed fits (drug and error) and the size of
+    the Cox cohort. A failed fit is logged and returned, never dropped silently."""
     merged = clin[["os_time", "os_event", pam_col]].copy()
     merged = merged.dropna()
     merged["os_time"] = pd.to_numeric(merged["os_time"], errors="coerce")
@@ -118,6 +125,7 @@ def run_cox_multivar(pred_df, clin, pam_col, penalizer):
                 penalizer, len(base), int(base["os_event"].sum()), pred_df.shape[1])
 
     results = []
+    failures = []
     for i, drug in enumerate(pred_df.columns):
         cox_data = base.copy()
         cox_data["predicted_auc"] = pred_df[drug].values
@@ -125,12 +133,22 @@ def run_cox_multivar(pred_df, clin, pam_col, penalizer):
             cph = CoxPHFitter(penalizer=penalizer)
             cph.fit(cox_data, duration_col="os_time", event_col="os_event")
             hr = cph.hazard_ratios_["predicted_auc"]
-            p = cph.summary.loc["predicted_auc", "p"]
-            results.append({"drug": drug, "HR": hr, "pvalue": p})
-        except Exception:
+            row = cph.summary.loc["predicted_auc"]
+            # 95% CI of the HR and the Wald statistic, reported with Tables 3 and 5
+            results.append({"drug": drug, "HR": hr, "pvalue": row["p"],
+                            "CI_low": row["exp(coef) lower 95%"],
+                            "CI_high": row["exp(coef) upper 95%"],
+                            "z": row["z"]})
+        except Exception as exc:
+            # Counted and written: BH below runs over the fitted drugs only, so a
+            # failure changes its denominator and has to be visible.
+            failures.append({"drug": drug, "error": f"{type(exc).__name__}: {exc}"})
+            logger.warning("  Cox fit failed for %s (penalizer=%.3f): %s: %s",
+                           drug, penalizer, type(exc).__name__, exc)
             continue
         if (i + 1) % 200 == 0:
             logger.info("  processed %d/%d drugs", i + 1, pred_df.shape[1])
+    logger.info("  %d of %d Cox fits failed", len(failures), pred_df.shape[1])
 
     df = pd.DataFrame(results)
     df["padj"] = stats.false_discovery_control(df["pvalue"])
@@ -143,7 +161,7 @@ def run_cox_multivar(pred_df, clin, pam_col, penalizer):
 
     logger.info("  %d/%d FDR<0.05, HR range among sig: [%.3f, %.3f]",
                 n_sig, len(df), hr_min, hr_max)
-    return df
+    return df, failures, (len(base), int(base["os_event"].sum()))
 
 
 def main():
@@ -190,11 +208,21 @@ def main():
         ("pen05",     0.5),   # conservative sensitivity
         ("pen001",    0.01),  # near-unpenalized replica of legacy v6
     ]
+    summary, failed = [], []
     for tag, pen in configs:
-        df = run_cox_multivar(pred_df, clin_scanb, pam_col, pen)
+        df, failures, (n_patients, n_events) = run_cox_multivar(pred_df, clin_scanb, pam_col, pen)
         out = RESULTS / f"cox_multivar_pam50_{tag}.csv"
         df.to_csv(out, index=False)
         logger.info("  wrote %s", out)
+        summary.append({"tag": tag, "penalizer": pen, "n_patients": n_patients, "n_events": n_events,
+                        "n_drugs_predicted": pred_df.shape[1], "n_fitted": len(df),
+                        "n_failed": len(failures)})
+        failed += [{"tag": tag, "penalizer": pen, **f} for f in failures]
+
+    pd.DataFrame(summary).to_csv(RESULTS / "cox_multivar_pam50_fit_summary.csv", index=False)
+    pd.DataFrame(failed, columns=["tag", "penalizer", "drug", "error"]).to_csv(
+        RESULTS / "cox_multivar_pam50_failures.csv", index=False)
+    logger.info("Failed Cox fits: %s", {s["tag"]: s["n_failed"] for s in summary})
 
     logger.info("DONE")
 

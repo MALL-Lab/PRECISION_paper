@@ -1,0 +1,36 @@
+config,tag,init_seed,run,test_pearson,median_pearson,n_drugs,shuffled_edges_kept,shuffled_edges_total
+Full graph,full,42,sage_split42_init42_full,0.7455405592918396,0.036177001893520355,1447,,
+Full graph,full,123,sage_split42_init123_full,0.7448433637619019,0.039906181395053864,1447,,
+Full graph,full,456,sage_split42_init456_full,0.7399569749832153,0.038165125995874405,1447,,
+Full graph,full,789,sage_split42_init789_full,0.7466413974761963,0.022405220195651054,1447,,
+Full graph,full,1011,sage_split42_init1011_full,0.7399237155914307,0.022629063576459885,1447,,
+No PPI (gene-gene),no_ppi,42,sage_split42_init42_no_ppi,0.7379277944564819,0.02300828881561756,1447,,
+No PPI (gene-gene),no_ppi,123,sage_split42_init123_no_ppi,0.7458153963088989,0.061359893530607224,1447,,
+No PPI (gene-gene),no_ppi,456,sage_split42_init456_no_ppi,0.744766354560852,0.05073976889252663,1447,,
+No PPI (gene-gene),no_ppi,789,sage_split42_init789_no_ppi,0.7374691963195801,0.03416195139288902,1447,,
+No PPI (gene-gene),no_ppi,1011,sage_split42_init1011_no_ppi,0.745088517665863,0.04316557198762894,1447,,
+No CollecTRI (TF-gene),no_collectri,42,sage_split42_init42_no_collectri,0.7427405714988708,0.04259096458554268,1447,,
+No CollecTRI (TF-gene),no_collectri,123,sage_split42_init123_no_collectri,0.7415046095848083,0.05777427554130554,1447,,
+No CollecTRI (TF-gene),no_collectri,456,sage_split42_init456_no_collectri,0.7443902492523193,0.06283628940582275,1447,,
+No CollecTRI (TF-gene),no_collectri,789,sage_split42_init789_no_collectri,0.7388365268707275,0.026070185005664825,1447,,
+No CollecTRI (TF-gene),no_collectri,1011,sage_split42_init1011_no_collectri,0.7441374659538269,0.04561411961913109,1447,,
+No drug-target,no_drug_target,42,sage_split42_init42_no_drug_target,0.7273744344711304,0.023148542270064354,1447,,
+No drug-target,no_drug_target,123,sage_split42_init123_no_drug_target,0.7264102101325989,0.041737981140613556,1447,,
+No drug-target,no_drug_target,456,sage_split42_init456_no_drug_target,0.7239969968795776,0.040538009256124496,1447,,
+No drug-target,no_drug_target,789,sage_split42_init789_no_drug_target,0.7203935980796814,0.03515316918492317,1447,,
+No drug-target,no_drug_target,1011,sage_split42_init1011_no_drug_target,0.7306959629058838,0.046050988137722015,1447,,
+No PPI + No drug-target,no_ppi_no_drug_target,42,sage_split42_init42_no_ppi_no_drug_target,0.7275130748748779,0.05444962531328201,1447,,
+No PPI + No drug-target,no_ppi_no_drug_target,123,sage_split42_init123_no_ppi_no_drug_target,0.7362024784088135,0.06682433187961578,1447,,
+No PPI + No drug-target,no_ppi_no_drug_target,456,sage_split42_init456_no_ppi_no_drug_target,0.725273072719574,0.04222536087036133,1447,,
+No PPI + No drug-target,no_ppi_no_drug_target,789,sage_split42_init789_no_ppi_no_drug_target,0.7332835793495178,0.05055438354611397,1447,,
+No PPI + No drug-target,no_ppi_no_drug_target,1011,sage_split42_init1011_no_ppi_no_drug_target,0.7303484678268433,0.04439176991581917,1447,,
+Only response edges (no prior knowledge),response_only,42,sage_split42_init42_response_only,0.7161238789558411,0.06343165040016174,1447,,
+Only response edges (no prior knowledge),response_only,123,sage_split42_init123_response_only,0.7297536134719849,0.03344681113958359,1447,,
+Only response edges (no prior knowledge),response_only,456,sage_split42_init456_response_only,0.7344701290130615,0.055851373821496964,1447,,
+Only response edges (no prior knowledge),response_only,789,sage_split42_init789_response_only,0.7060108184814453,0.011959653347730637,1447,,
+Only response edges (no prior knowledge),response_only,1011,sage_split42_init1011_response_only,0.7253202795982361,0.03730134665966034,1447,,
+Drug-target rewired (degrees kept),shuffled_drug_target,42,sage_split42_init42_shuffled_drug_target,0.7396834492683411,0.02903083711862564,1447,60.0,3442.0
+Drug-target rewired (degrees kept),shuffled_drug_target,123,sage_split42_init123_shuffled_drug_target,0.7407350540161133,0.032324373722076416,1447,61.0,3442.0
+Drug-target rewired (degrees kept),shuffled_drug_target,456,sage_split42_init456_shuffled_drug_target,0.7408286333084106,0.04340292140841484,1447,56.0,3442.0
+Drug-target rewired (degrees kept),shuffled_drug_target,789,sage_split42_init789_shuffled_drug_target,0.7404738664627075,0.025400446727871895,1447,67.0,3442.0
+Drug-target rewired (degrees kept),shuffled_drug_target,1011,sage_split42_init1011_shuffled_drug_target,0.7425902485847473,0.03332681953907013,1447,63.0,3442.0

@@ -1,0 +1,5 @@
+term,hr,ci_low,ci_high,p,n_events_level,expected_range,decides,verdict,note
+positive lymph nodes,3.11191631222816,1.727747471072809,5.604999165936339,0.00015597562276470903,32 of 142 against 17 of 214,2.5 to 3.5,True,True,"the established prognostic signal of the cohort, the 2 patients with no node count counted as node-negative"
+"positive lymph nodes, complete cases",3.079891416591717,1.7099697363015718,5.547309368475526,0.00017902555572909883,32 of 142 against 17 of 212,2.5 to 3.5,False,,"sensitivity, the 2 patients with no node count removed"
+tumour size (cm),1.349476954057821,1.0967462059284971,1.6604461813400622,0.0046142945840406055,49 events in 355 patients,1.25 to 1.45 per cm,False,,descriptive
+immune subtype (IM) against the rest,0.4331540575696474,0.1843404257202994,1.017804080987259,0.05492398695724158,6 of 86,below 1,False,,"descriptive, too few events to decide"

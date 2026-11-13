@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """
-PRECISION: TF importance via Integrated Gradients (Captum).
+PRECISION - TF importance via Integrated Gradients (Captum).
 
-Replaces the zero-out feature ablation baseline (Script 13 / src/xai/explainer_v2.py)
-with Integrated Gradients (Sundararajan et al. 2017) on the trained SAGE GNN
-(best_sage_v4.pt). IG is axiomatic (completeness, linearity, sensitivity), gives
-SIGNED attributions, and aligns with standard XAI practice for deep-graph models.
+Integrated Gradients (Sundararajan et al. 2017) on the canonical SAGE model of
+Paper 1, the run sage_split42_init42_full trained by scripts/57_train_gnns.py
+(cell-line split 42, initialization seed 42, final-epoch weights, all 1,448
+drugs trained), loaded with src.models.training.load_run. IG is axiomatic
+(completeness, linearity, sensitivity) and gives SIGNED attributions.
 
 Scope:
     - 12 TNBC cell lines (ModelSubtypeFeatures contains "TNBC")
@@ -13,26 +14,45 @@ Scope:
       Candidates: osimertinib, saracatinib, erlotinib, brigatinib, pelitinib,
             entinostat, trametinib
       Controls: paclitaxel, docetaxel, epirubicin, olaparib
-    - 3 seeds: 42, 123, 456
     - n_steps = 50 (Captum default)
-    - Baseline: mean TF feature over 381 TRAIN cells (fixed, reproducible)
+    - Baseline: mean cell-line feature row over the 381 training cell lines of
+      the seed-42 split (fixed, reproducible)
 
-Total (cell, drug, seed) triplets: 12 * 11 * 3 = 396 IG attributions
-(each triplet = 50 forward+backward passes = ~20k GNN calls).
+IG is deterministic for a fixed model and baseline, so it runs once:
+12 x 11 = 132 (cell, drug) attributions, each of 50 forward and backward
+passes. Earlier versions repeated it for three "seeds" on one checkpoint,
+which gave three identical copies. The variability across independently
+trained models is measured by script 35 (seeds 42, 123 and 456), whose seed-42
+model is this same checkpoint. The script stops if the model was not trained
+on every drug node, so every drug of both candidate sets is a trained drug.
 
 Outputs in results/v4_xai/:
-    tf_importance_ig_global.csv:   mean |attr| across seeds x cells x drugs
-    tf_drug_ig_signed.csv:         top 20 TFs x 11 drugs, signed
-    ig_full_attributions.csv:      full long-form table for reproducibility
-    ig_gnn_vs_rf_comparison.csv:   IG vs RF permutation importance merge
+    tf_importance_ig_global.csv    mean |attr| across cells x drugs, per TF
+    tf_drug_ig_signed.csv          top 20 TFs x 11 drugs, signed
+    ig_full_attributions.csv       full long-form table for reproducibility
+                                   (the seed column is the model seed, 42)
+    ig_gnn_vs_rf_comparison.csv    IG vs RF permutation importance merge
+With --candidate-set extended the candidates are the 16 kinase or HDAC
+inhibitors of Supplementary Data 1 and every output is suffixed _extended.
+Drug names are lowercase, as in the graph drug nodes.
 
-Sign convention (IMPORTANT): target = predicted AUC. Positive attribution
-    means "higher TF activity -> higher predicted AUC" -> resistance driver.
-    Negative attribution means "higher TF activity -> lower AUC" -> sensitivity
-    driver. Documented in the CSV headers.
+Sign convention (IMPORTANT): target = predicted AUC. Attributions are
+    relative to the mean-train baseline x0. For TF k,
+    attr_k = (x_k - x0_k) * g_k, where g_k is the gradient of the predicted
+    AUC averaged along the straight path from x0 to x. A positive attribution
+    means that TF k, moving from its baseline value to this line's value,
+    contributed to raising the predicted AUC above the baseline prediction
+    (the attributions of all dimensions add up to f(x) - f(x0)). Its sign is
+    the sign of g_k times the sign of (x_k - x0_k). It does NOT by itself
+    mean that higher TF activity raises the predicted AUC. The direction of
+    the effect of higher activity is the sign of the path-averaged gradient
+    g_k, which is attr_k / (x_k - x0_k). For a TF whose activity in the TNBC
+    lines is below the baseline, a positive attribution comes from a negative
+    gradient. scripts/65_ig_diagnostics.py compares both signs on the top 20
+    TFs x 11 drugs. Documented in the CSV headers.
 
 Run from project root:
-    python scripts/32_xai_ig.py
+    python scripts/32_xai_ig.py [--candidate-set table5|extended]
 """
 
 from __future__ import annotations
@@ -49,13 +69,12 @@ import pandas as pd
 import torch
 import torch.nn as nn
 
-from config import PAPER_RESULTS, DATA_DIR, RESULTS_DIR as RESULTS_ROOT
-from src.data.drug_names import normalize_drug_columns
+from config import PAPER_RESULTS, DATA_DIR, RESULTS_DIR as RESULTS_ROOT  # noqa: E402
+from src.data.drug_names import normalize_drug_columns, normalize_drug_name
 from src.data.load_depmap import load_model_info
 from src.data.load_drug_response import load_prism_response
 from src.data.splits import cell_line_holdout_split, set_all_seeds
-from src.graph.hetero_data import load_hetero_data
-from src.models.hetero_gnn import HeteroGNNDrugResponse
+from src.models import training as T
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,10 +83,11 @@ logging.basicConfig(
 logger = logging.getLogger("xai_ig")
 
 RESULTS_DIR = RESULTS_ROOT / "v4_xai"
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = T.device()
 
-BASE_SEED = 42
-SEEDS = [42, 123, 456]
+# Split and initialization seed of the canonical SAGE model
+# (sage_split42_init42_full), written to the seed column of the outputs.
+CANONICAL_SEED = 42
 N_STEPS = 50
 
 # The seven candidates of Table 5 (main analysis, candidate set "table5").
@@ -84,7 +104,7 @@ SUPP_TABLE_S1 = PAPER_RESULTS / "supp_table_S1_candidate_selection.csv"
 def resolve_candidate_set(name: str) -> list:
     """Candidate drugs for a named set: 'table5' (the seven drugs of Table 5)
     or 'extended' (every kinase or HDAC inhibitor passing the stability and
-    development-stage filters of the selection rule, Supplementary Table S1,
+    development-stage filters of the selection rule, Supplementary Data 1,
     i.e. the same rule without the rank cutoff)."""
     if name == "table5":
         return list(CANDIDATE_DRUGS)
@@ -96,11 +116,14 @@ def resolve_candidate_set(name: str) -> list:
 
 
 def match_graph_drug_names(names, drug_map):
-    """Map drug names to the keys of the graph drug map, case-insensitively.
-    The graph keeps the original PRISM spelling (e.g. 'BVD-523') while the Cox
-    tables and the selection rule use lowercase names."""
-    lower = {k.lower(): k for k in drug_map}
-    return [lower.get(str(n).lower(), n) for n in names]
+    """Normalize drug names to the lowercase spelling of the graph drug nodes
+    (load_hetero_data lowercases node_maps['drug']) and check that each one has
+    a node. Raises KeyError listing the drugs without one."""
+    normalized = [normalize_drug_name(n) for n in names]
+    missing = [n for n in normalized if n not in drug_map]
+    if missing:
+        raise KeyError(f"Drugs not in the graph: {missing}")
+    return normalized
 
 
 def configure_candidate_set(name: str) -> None:
@@ -218,48 +241,41 @@ def attribute_pair(wrapper, cell_row, baseline_row, n_steps, use_captum=True):
 # =============================================================================
 # Model + data loading
 # =============================================================================
-def load_sage_and_data():
-    """Rebuild SAGE architecture, load best_sage_v4.pt, return everything the
-    wrapper needs (mp_edges, x_dict, node_maps, model_info, train cells, drug
-    response)."""
+def load_ig_model(graph: T.Graph, split_seed: int, init_seed: int,
+                  drug_response: pd.DataFrame):
+    """Load the SAGE model trained by scripts/57_train_gnns.py on one split and
+    initialization seed (full graph), from T.RUNS_DIR.
+
+    Returns (model, mp_edges, train_cells), where train_cells are the training
+    cell lines of that split, the population of the mean-train IG baseline.
+    Raises if the model was not trained on every drug node of the graph, the
+    condition that makes every drug of the candidate sets a trained drug.
+    """
+    sage, mp_edges, sidecar = T.load_run("sage", split_seed, init_seed, graph)
+    if sidecar["n_train_drugs"] != graph.n_drugs:
+        raise RuntimeError(
+            f"{sidecar['run']} was trained on {sidecar['n_train_drugs']} of "
+            f"{graph.n_drugs} drugs, IG needs a model trained on every drug"
+        )
+    train_cells, _ = cell_line_holdout_split(
+        drug_response, test_frac=T.TEST_FRAC, seed=split_seed,
+    )
+    logger.info("Loaded %s from %s (%d of %d drugs trained, final epoch)",
+                sidecar["run"], T.RUNS_DIR, sidecar["n_train_drugs"], graph.n_drugs)
+    return sage, mp_edges, train_cells
+
+
+def load_sage_and_data(split_seed: int = CANONICAL_SEED,
+                       init_seed: int = CANONICAL_SEED):
+    """Load the graph, the PRISM responses, the DepMap model table and the
+    canonical SAGE model, and return everything the IG sweep needs:
+    (model, x_dict, mp_edges, node_maps, model_info, drug_response, train_cells).
+    """
+    graph = T.load_graph(DEVICE)
     drug_response = normalize_drug_columns(load_prism_response(use_processed=True))
-    model_info = load_model_info()
-    data, node_maps = load_hetero_data()
-    data = data.to(DEVICE)
-
-    train_cells, test_cells = cell_line_holdout_split(
-        drug_response, test_frac=0.2, seed=BASE_SEED,
-    )
-
-    rk = ("cell_line", "responds_to", "drug")
-    mp_edges = {}
-    for et in data.edge_types:
-        if et == rk:
-            continue
-        mp_edges[et] = data[et].edge_index
-        s, r, d = et
-        mp_edges[(d, f"rev_{r}", s)] = data[et].edge_index.flip(0)
-
-    x_dict = {nt: data[nt].x for nt in data.node_types}
-    nfd = {nt: data[nt].x.shape[1] for nt in data.node_types}
-    n_drugs = len(node_maps["drug"])
-
-    sage = HeteroGNNDrugResponse(
-        node_feature_dims=nfd, hidden_dim=128, n_layers=3,
-        dropout=0.33, conv_type="sage",
-        edge_types=list(mp_edges.keys()), n_drugs=n_drugs,
-    ).to(DEVICE)
-
-    state_dict = torch.load(
-        RESULTS_DIR / "best_sage_v4.pt", map_location=DEVICE, weights_only=True,
-    )
-    sage.load_state_dict(state_dict)
-    sage.eval()
-
-    logger.info("Loaded SAGE from %s (n_layers=3, hidden=128, n_drugs=%d)",
-                RESULTS_DIR / "best_sage_v4.pt", n_drugs)
-
-    return sage, x_dict, mp_edges, node_maps, model_info, drug_response, train_cells
+    sage, mp_edges, train_cells = load_ig_model(graph, split_seed, init_seed, drug_response)
+    return (sage, graph.x_dict, mp_edges, graph.node_maps, load_model_info(),
+            drug_response, train_cells)
 
 
 def identify_tnbc_cells(model_info: pd.DataFrame,
@@ -293,74 +309,70 @@ def load_tf_names() -> list[str]:
 # =============================================================================
 def run_ig_sweep(sage, x_dict, mp_edges, node_maps, tnbc_cell_ids,
                   drugs, train_cells, cell_map, drug_map) -> pd.DataFrame:
-    """Run IG for all (seed, cell, drug) triplets. Returns the long-form
-    DataFrame with one row per (seed, cell, drug, tf)."""
+    """Run IG once for every (cell, drug) pair. Returns the long-form
+    DataFrame with one row per (cell, drug, tf), the seed column holding the
+    seed of the canonical model."""
     tf_names = load_tf_names()
     n_tfs = len(tf_names)  # 771
     cell_feat = x_dict["cell_line"]  # [476, 1271]
 
-    # Baseline = mean TF feature across TRAIN cells (only TF dims vary, rest 0).
-    # We still need the full 1271-dim baseline for IG over the whole row;
-    # the non-TF dims (gene expression, 500 dims) also get a baseline of
-    # mean-train so they stay approximately equal to the cell's own values
-    # and generate small residual attributions.
+    # Baseline = mean cell-line feature row over the TRAIN cells of the split.
+    # IG runs over the whole 1271-dim row (771 TF activities, then 500
+    # expression features), so the expression dims get the mean-train
+    # baseline too. Only the TF dims are kept in the output.
     train_cell_idx = torch.tensor(
         [cell_map[c] for c in train_cells if c in cell_map],
         device=DEVICE, dtype=torch.long,
     )
     baseline_row = cell_feat[train_cell_idx].mean(dim=0).detach()
-    logger.info("Baseline row: shape=%s, |baseline_row| mean=%.4f",
+    logger.info("Baseline row: mean over %d training cell lines, shape=%s, "
+                "|baseline_row| mean=%.4f", len(train_cell_idx),
                 tuple(baseline_row.shape), baseline_row.abs().mean().item())
 
     records = []
-    total = len(SEEDS) * len(tnbc_cell_ids) * len(drugs)
+    total = len(tnbc_cell_ids) * len(drugs)
     idx = 0
     t0 = time.time()
 
-    for seed in SEEDS:
-        set_all_seeds(seed)
+    for cell_id in tnbc_cell_ids:
+        cell_idx = cell_map[cell_id]
+        cell_row = cell_feat[cell_idx].detach()
 
-        for cell_id in tnbc_cell_ids:
-            cell_idx = cell_map[cell_id]
-            cell_row = cell_feat[cell_idx].detach()
+        for drug_name in drugs:
+            drug_idx = drug_map[drug_name]
+            wrapper = GNNCellLineWrapper(
+                sage, mp_edges, x_dict, cell_idx, drug_idx, DEVICE,
+            )
 
-            for drug_name in drugs:
-                drug_idx = drug_map[drug_name]
-                wrapper = GNNCellLineWrapper(
-                    sage, mp_edges, x_dict, cell_idx, drug_idx, DEVICE,
+            attr = attribute_pair(
+                wrapper, cell_row, baseline_row, n_steps=N_STEPS,
+            )
+            attr_np = attr.cpu().numpy()[:n_tfs]  # keep only TF dims
+
+            for k in range(n_tfs):
+                records.append({
+                    "seed": CANONICAL_SEED,
+                    "cell_depmap_id": cell_id,
+                    "drug": drug_name,
+                    "tf_index": k,
+                    "tf": tf_names[k],
+                    "attribution": float(attr_np[k]),
+                })
+
+            idx += 1
+            if idx % 20 == 0 or idx == total:
+                elapsed = time.time() - t0
+                rate = idx / max(elapsed, 1e-6)
+                eta = (total - idx) / max(rate, 1e-6)
+                logger.info(
+                    "  IG %d/%d (cell=%s, drug=%s) - elapsed %.0fs, eta %.0fs",
+                    idx, total, cell_id, drug_name, elapsed, eta,
                 )
-
-                attr = attribute_pair(
-                    wrapper, cell_row, baseline_row, n_steps=N_STEPS,
-                )
-                attr_np = attr.cpu().numpy()[:n_tfs]  # keep only TF dims
-
-                for k in range(n_tfs):
-                    records.append({
-                        "seed": seed,
-                        "cell_depmap_id": cell_id,
-                        "drug": drug_name,
-                        "tf_index": k,
-                        "tf": tf_names[k],
-                        "attribution": float(attr_np[k]),
-                    })
-
-                idx += 1
-                if idx % 20 == 0 or idx == total:
-                    elapsed = time.time() - t0
-                    rate = idx / max(elapsed, 1e-6)
-                    eta = (total - idx) / max(rate, 1e-6)
-                    logger.info(
-                        "  IG %d/%d (seed=%d, cell=%s, drug=%s) - "
-                        "elapsed %.0fs, eta %.0fs",
-                        idx, total, seed, cell_id, drug_name, elapsed, eta,
-                    )
 
     full = pd.DataFrame.from_records(records)
-    logger.info("Full attributions: %d rows (expected %d = %d seeds * %d cells"
-                " * %d drugs * %d TFs)",
-                len(full), total * n_tfs, len(SEEDS), len(tnbc_cell_ids),
-                len(drugs), n_tfs)
+    logger.info("Full attributions: %d rows (expected %d = %d cells * %d drugs"
+                " * %d TFs)",
+                len(full), total * n_tfs, len(tnbc_cell_ids), len(drugs), n_tfs)
     return full
 
 
@@ -368,19 +380,18 @@ def run_ig_sweep(sage, x_dict, mp_edges, node_maps, tnbc_cell_ids,
 # Aggregations
 # =============================================================================
 def compute_global_importance(full: pd.DataFrame) -> pd.DataFrame:
-    """Mean |attribution| across seeds x cells x drugs per TF, with bootstrap
-    CI over all (seed, cell, drug) groups.
+    """Mean |attribution| across cells x drugs per TF, with its spread over
+    the (cell, drug) pairs.
 
     importance_mean  = mean of |attr| over all rows per TF
-    importance_std   = std of per-(seed, cell, drug) mean |attr|
-    importance_ci_*  = 2.5 / 97.5 percentile of per-(seed, cell, drug) mean |attr|
+    importance_std   = std of |attr| over the (cell, drug) pairs
+    importance_ci_*  = 2.5 / 97.5 percentile of |attr| over the (cell, drug) pairs
     """
     work = full.copy()
     work["abs_attr"] = work["attribution"].abs()
 
-    # Per (seed, cell, drug, tf) we already have a single attribution.
-    # Per (seed, cell, drug) importance of a TF = |attr| directly.
-    # Aggregate mean and distribution stats per TF.
+    # Each (cell, drug, tf) has a single attribution, so the importance of a
+    # TF for one pair is |attr| directly. Aggregate mean and spread per TF.
     mean_abs = work.groupby("tf")["abs_attr"].agg(
         importance_mean="mean",
         importance_std="std",
@@ -397,7 +408,7 @@ def compute_global_importance(full: pd.DataFrame) -> pd.DataFrame:
 
 def compute_signed_matrix(full: pd.DataFrame, top_tfs: list[str],
                            drugs: list[str]) -> pd.DataFrame:
-    """Matrix top_tfs x drugs with mean SIGNED attribution across (seed, cell)."""
+    """Matrix top_tfs x drugs with mean SIGNED attribution across cells."""
     sub = full[full["tf"].isin(top_tfs)]
     mat = sub.groupby(["tf", "drug"])["attribution"].mean().unstack("drug")
 
@@ -409,8 +420,8 @@ def compute_signed_matrix(full: pd.DataFrame, top_tfs: list[str],
 
 def compute_rf_overlap(global_imp: pd.DataFrame,
                         top_k: int = 20) -> pd.DataFrame:
-    """Merge IG importance with RF permutation importance; flag top-k overlap."""
-    rf_path = RESULTS_ROOT / "v6_strengthen" / "rf_permutation_importance.csv"
+    """Merge IG importance with RF permutation importance and flag the top-k overlap."""
+    rf_path = RESULTS_DIR / "v6_strengthen/rf_permutation_importance.csv"
     if not rf_path.exists():
         logger.warning("RF importance file not found at %s, skipping overlap",
                        rf_path)
@@ -451,7 +462,7 @@ def _parse_args():
     ap = argparse.ArgumentParser(description="Integrated Gradients TF attributions")
     ap.add_argument("--candidate-set", choices=["table5", "extended"], default="table5",
                     help="table5: the seven candidates of Table 5 (default). extended: the 16 "
-                         "kinase/HDAC inhibitors of Supplementary Table S1, outputs suffixed _extended")
+                         "kinase/HDAC inhibitors of Supplementary Data 1, outputs suffixed _extended")
     return ap.parse_args()
 
 
@@ -460,7 +471,7 @@ def main() -> int:
     args = _parse_args()
     configure_candidate_set(args.candidate_set)
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-    set_all_seeds(BASE_SEED)
+    set_all_seeds(CANONICAL_SEED)
 
     logger.info("DEVICE=%s, captum available=%s",
                 DEVICE, "yes" if _captum_available() else "no")
@@ -472,22 +483,19 @@ def main() -> int:
     cell_map = node_maps["cell_line"]
     drug_map = node_maps["drug"]
     CANDIDATE_DRUGS = match_graph_drug_names(CANDIDATE_DRUGS, drug_map)
-    ALL_DRUGS = CANDIDATE_DRUGS + CONTROL_DRUGS
+    ALL_DRUGS = CANDIDATE_DRUGS + match_graph_drug_names(CONTROL_DRUGS, drug_map)
 
-    # ── Identify TNBC cells + validate drugs ────────────────────────────
+    # ── Identify TNBC cells ─────────────────────────────────────────────
     tnbc_cell_ids = identify_tnbc_cells(model_info, drug_response, cell_map)
     logger.info("TNBC cell lines for IG: %d", len(tnbc_cell_ids))
-
-    missing = [d for d in ALL_DRUGS if d not in drug_map]
-    if missing:
-        raise RuntimeError(f"Drugs not in graph: {missing}")
     logger.info("Drugs for IG (%s set): %d (%d candidates + %d controls)",
                 args.candidate_set, len(ALL_DRUGS), len(CANDIDATE_DRUGS), len(CONTROL_DRUGS))
 
     # ── Run IG sweep ────────────────────────────────────────────────────
     logger.info("=" * 60)
-    logger.info("INTEGRATED GRADIENTS: %d seeds x %d cells x %d drugs",
-                len(SEEDS), len(tnbc_cell_ids), len(ALL_DRUGS))
+    logger.info("INTEGRATED GRADIENTS: %s, %d cells x %d drugs",
+                T.run_name("sage", CANONICAL_SEED, CANONICAL_SEED),
+                len(tnbc_cell_ids), len(ALL_DRUGS))
     logger.info("=" * 60)
 
     full = run_ig_sweep(
@@ -513,11 +521,12 @@ def main() -> int:
     _write_with_header(
         global_path, global_imp,
         header_comment=(
-            "# IG global importance: mean |attribution| across seeds x "
-            f"TNBC cells x drugs ({len(SEEDS)} x {len(tnbc_cell_ids)} x {len(ALL_DRUGS)} = "
-            f"{len(SEEDS) * len(tnbc_cell_ids) * len(ALL_DRUGS)} samples per TF).\n"
+            "# IG global importance of the canonical SAGE model "
+            f"({T.run_name('sage', CANONICAL_SEED, CANONICAL_SEED)}): mean |attribution| across "
+            f"TNBC cells x drugs ({len(tnbc_cell_ids)} x {len(ALL_DRUGS)} = "
+            f"{len(tnbc_cell_ids) * len(ALL_DRUGS)} samples per TF).\n"
             "# Non-signed (magnitude). For signed per-drug see "
-            "tf_drug_ig_signed.csv.\n"
+            f"tf_drug_ig_signed{OUTPUT_SUFFIX}.csv.\n"
         ),
     )
     logger.info("Saved %s (top 5: %s)", global_path,
@@ -530,11 +539,14 @@ def main() -> int:
     _write_with_header(
         signed_path, signed,
         header_comment=(
-            "# Signed IG attribution: mean across seeds x TNBC cells per "
+            "# Signed IG attribution: mean across TNBC cells per "
             "(TF, drug). Rows = top 20 TFs by global IG importance.\n"
-            "# Sign: target=predicted AUC. POSITIVE attribution -> higher TF "
-            "activity raises predicted AUC -> resistance driver. NEGATIVE -> "
-            "sensitivity driver.\n"
+            "# Sign: target=predicted AUC. Attributions are relative to the "
+            "mean-train baseline: POSITIVE means the move of TF activity from "
+            "the baseline to the line's value raised the predicted AUC. The "
+            "direction of the effect of higher TF activity is the sign of the "
+            "path-averaged gradient, attribution / (x - baseline), not the "
+            "sign of the attribution.\n"
         ),
     )
     logger.info("Saved %s (%d rows x %d cols)",
@@ -554,7 +566,7 @@ def main() -> int:
         logger.info("  #%d %-12s |attr|=%.4e  CI95=[%.4e, %.4e]",
                     r["rank"], r["tf"], r["importance_mean"],
                     r["importance_ci_low"], r["importance_ci_high"])
-    logger.info("DONE. Results in %s/", RESULTS_DIR)
+    logger.info("DONE, results in %s/", RESULTS_DIR)
     return 0
 
 

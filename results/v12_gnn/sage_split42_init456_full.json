@@ -1,0 +1,40 @@
+{
+  "run": "sage_split42_init456_full",
+  "arch": "sage",
+  "split_seed": 42,
+  "init_seed": 456,
+  "tag": "full",
+  "excluded_relations": [],
+  "hyperparameters": {
+    "hidden_dim": 128,
+    "n_layers": 3,
+    "dropout": 0.33,
+    "conv_type": "sage"
+  },
+  "optimizer": {
+    "epochs": 800,
+    "lr": 0.0013,
+    "weight_decay": 0.0001,
+    "eta_min": 1e-05
+  },
+  "checkpoint_selection": "final epoch",
+  "n_train_edges": 491533,
+  "n_test_edges": 122792,
+  "n_train_drugs": 1448,
+  "n_eval_test_edges": 122784,
+  "n_eval_drugs": 1447,
+  "metrics": {
+    "global_pearson": 0.7399569749832153,
+    "n_drugs": 1447,
+    "median_pearson": 0.038165125995874405,
+    "mean_pearson": 0.03615183010697365,
+    "pct_gt_0.3": 0.414651002073255
+  },
+  "seconds": 84.5,
+  "sha256": "18f03028767329b7bb4a6fcf9391c3e16d98fed3495017d9efa4bd303f48be94",
+  "torch": "2.11.0+cu128",
+  "torch_geometric": "2.7.0",
+  "device": "NVIDIA GeForce RTX 5060 Laptop GPU",
+  "git_sha": "5df682de2c7675d87a10c83235a02a7725b55bdb",
+  "git_dirty": true
+}

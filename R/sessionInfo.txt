@@ -16,11 +16,16 @@ survminer            0.5.2     CRAN
 dplyr                1.2.0     CRAN
 tidyr                1.3.2     CRAN
 tibble               3.3.1     CRAN
+data.table           1.18.2.1  CRAN
 
 Scripts that load these packages
 --------------------------------
 R/config.R                        decoupleR (get_collectri, live fallback only)
 scripts/09_scanb_transfer.R       dplyr, tidyr, tibble, survival, survminer, decoupleR
 scripts/20_multicohort_validation.R  dplyr, tidyr, tibble, decoupleR, genefu, SummarizedExperiment
+scripts/20b_metabric_pam50.R      genefu, dplyr
+scripts/68_fuscc_tf_activities.R  data.table, dplyr, tidyr, tibble, decoupleR
+scripts/70_gene_universe_tcga.R   data.table, dplyr, tidyr, tibble, decoupleR, SummarizedExperiment
+tests/zph_exact_reference.R       survival
 scripts/00_download_tcga_brca.R   TCGAbiolinks 2.38.0 (input download only, not in install.R), SummarizedExperiment
 scripts/00b_download_metabric.R   httr 1.4.8, jsonlite 2.0.0 (input download only, not in install.R), dplyr, tidyr, tibble

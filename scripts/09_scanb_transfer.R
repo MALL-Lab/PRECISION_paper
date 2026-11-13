@@ -120,8 +120,8 @@ cat("  (saving after ID mapping in step 3)\n\n")
 # ==============================================================================
 cat("--- Step 3: Merging TF activities with clinical data ---\n")
 
-# Expression sample IDs are long (S000001.l.r.m.c.lib.g.k2.a.t),
-# clinical IDs are short (S000001). Extract prefix for matching.
+# Expression sample IDs are long (the sample code followed by dotted library
+# suffixes), clinical IDs are the code alone. Extract prefix for matching.
 tf_acts_wide$short_id <- sub("\\..*", "", rownames(tf_acts_wide))
 
 # Some patients have multiple samples: keep the first per short_id

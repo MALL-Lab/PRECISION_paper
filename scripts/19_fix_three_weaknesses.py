@@ -92,7 +92,9 @@ def weakness1_tf_subset_transfer():
         prism_sub = tf_activities[[t for t in tf_subset if t in tf_activities.columns]]
         scanb_sub = scanb_tf[[t for t in tf_subset if t in scanb_tf.columns]]
 
-        prism_qt = pd.DataFrame(qt.fit_transform(prism_sub), index=prism_sub.index, columns=prism_sub.columns)
+        # Fitted on the training cell lines only, as in the canonical transfer (scripts 17, 21 and 22)
+        qt.fit(prism_sub.loc[[c for c in train_cells if c in prism_sub.index]])
+        prism_qt = pd.DataFrame(qt.transform(prism_sub), index=prism_sub.index, columns=prism_sub.columns)
         scanb_qt = pd.DataFrame(qt.transform(scanb_sub), index=scanb_sub.index, columns=scanb_sub.columns)
 
         train_feat = prism_qt.loc[[c for c in train_cells if c in prism_qt.index]]

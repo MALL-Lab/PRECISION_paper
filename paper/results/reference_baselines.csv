@@ -1,0 +1,3 @@
+model,global_pearson,median_perdrug,pct_gt_03,n_drugs,n_test_pairs,within_drug_pearson,between_drug_variance_share
+Drug_mean_train,0.7639098520167728,,,1447,122784,,0.5885245015207932
+Transfer_Ridge_TF,0.7002593476429587,0.08567714251199934,6.219765031098825,1447,122784,0.09894491364038294,

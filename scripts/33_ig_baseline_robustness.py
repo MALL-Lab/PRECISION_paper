@@ -5,31 +5,37 @@ PRECISION - IG baseline robustness for XAI.
 Runs Integrated Gradients (Captum) against 3 different baselines to test
 stability of the TF importance ranking:
 
-  1. mean      - mean TF feature across 381 TRAIN cells (canonical, same as
-                 script 32).
+  1. mean      - mean cell-line feature row over the 381 training cell lines
+                 of the seed-42 split (canonical, same as script 32).
   2. zero      - zeros baseline (standard Captum default).
   3. random    - 3 independent random Gaussian baselines (seeds 1, 2, 3) with
-                 per-dim mean/std matched to the train distribution; reported
-                 as an average over the 3 random draws.
+                 per-dimension mean and std matched to the training cell
+                 lines, reported as an average over the 3 random draws.
 
-All baselines operate on the same trained SAGE GNN (best_sage_v4.pt, SEED=42
-at training) and the same 12 TNBC cell lines x 11 drugs (7 candidates + 4 controls)
-scope as script 32. We use a single random seed (42) for the bootstrap
-sampling within each baseline to isolate the baseline effect.
+All baselines attribute the canonical SAGE model of script 32
+(sage_split42_init42_full, trained by scripts/57_train_gnns.py and loaded
+through the loader of script 32, which also checks that every drug was
+trained) on the same 12 TNBC cell lines x 11 drugs (7 candidates + 4
+controls). IG is deterministic for a fixed model and baseline, so the random
+draws are the only source of randomness and the mean-baseline importances
+match tf_importance_ig_global.csv of script 32 up to floating-point noise.
 
-Purpose: the internal methods review asked for IG stability across
-baselines: without this, the IG top-10 (ZEB1/RELA/HOXB9/...) could be an
-artefact of the mean-train baseline choice.
+Purpose: without this check, the IG ranking could be an artefact of the
+mean-train baseline choice.
 
 Outputs in results/v4_xai/:
   ig_baseline_mean.csv      - tf, importance_mean, rank
   ig_baseline_zero.csv      - tf, importance_mean, rank
-  ig_baseline_random.csv    - tf, importance_mean, std (across 3 draws), rank
+  ig_baseline_random.csv    - tf, importance_mean, importance_std (across the
+                              3 draws), rank
   ig_baseline_stability.csv - tf, rank_mean, rank_zero, rank_random,
-                              in_top20_all, mean_across_baselines
+                              in_top20_mean, in_top20_zero, in_top20_random,
+                              in_top20_all, mean_rank_across_baselines
+With --candidate-set extended the candidates are the 16 kinase or HDAC
+inhibitors of Supplementary Data 1 and every output is suffixed _extended.
 
 Run from project root:
-    python scripts/33_ig_baseline_robustness.py
+    python scripts/33_ig_baseline_robustness.py [--candidate-set table5|extended]
 """
 
 from __future__ import annotations
@@ -45,15 +51,10 @@ import numpy as np
 import pandas as pd
 import torch
 
-from config import RESULTS_DIR as RESULTS_ROOT
-from src.data.drug_names import normalize_drug_columns
-from src.data.load_depmap import load_model_info
-from src.data.load_drug_response import load_prism_response
-from src.data.splits import cell_line_holdout_split, set_all_seeds
-from src.graph.hetero_data import load_hetero_data
-from src.models.hetero_gnn import HeteroGNNDrugResponse
+from config import RESULTS_DIR as RESULTS_ROOT  # noqa: E402
+from src.data.splits import set_all_seeds
 
-# Reuse the wrapper + attribute_pair from script 32.
+# Reuse the model loader, the wrapper and attribute_pair of script 32.
 sys.path.insert(0, str(Path(__file__).parent))
 _script_32 = Path(__file__).parent / "32_xai_ig.py"
 import importlib.util
@@ -72,12 +73,12 @@ logging.basicConfig(level=logging.INFO,
 logger = logging.getLogger("ig_robustness")
 
 RESULTS_DIR = RESULTS_ROOT / "v4_xai"
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-BASE_SEED = 42
+DEVICE = _mod32.DEVICE
+BASE_SEED = _mod32.CANONICAL_SEED
 N_STEPS = 50
 
 # Candidate set: the seven drugs of Table 5 by default, or the extended set of
-# Supplementary Table S1 with --candidate-set extended (outputs suffixed).
+# Supplementary Data 1 with --candidate-set extended (outputs suffixed).
 CANDIDATE_DRUGS = list(_mod32.CANDIDATE_DRUGS)
 CONTROL_DRUGS = list(_mod32.CONTROL_DRUGS)
 ALL_DRUGS = CANDIDATE_DRUGS + CONTROL_DRUGS
@@ -173,14 +174,14 @@ def main() -> int:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     set_all_seeds(BASE_SEED)
 
-    logger.info("Loading SAGE + graph...")
+    logger.info("Loading the canonical SAGE model + graph...")
     (sage, x_dict, mp_edges, node_maps, model_info,
      drug_response, train_cells) = load_sage_and_data()
 
     cell_map = node_maps["cell_line"]
     drug_map = node_maps["drug"]
     CANDIDATE_DRUGS = _mod32.match_graph_drug_names(CANDIDATE_DRUGS, drug_map)
-    ALL_DRUGS = CANDIDATE_DRUGS + CONTROL_DRUGS
+    ALL_DRUGS = CANDIDATE_DRUGS + _mod32.match_graph_drug_names(CONTROL_DRUGS, drug_map)
 
     tnbc_cell_ids = identify_tnbc_cells(model_info, drug_response, cell_map)
     logger.info("TNBC cells: %d  drugs: %d", len(tnbc_cell_ids), len(ALL_DRUGS))
@@ -205,8 +206,8 @@ def main() -> int:
     )
     imp_mean = aggregate_importance(full_mean)
     imp_mean.to_csv(RESULTS_DIR / f"ig_baseline_mean{OUTPUT_SUFFIX}.csv", index=False)
-    logger.info("  wrote ig_baseline_mean.csv (top3: %s)",
-                imp_mean.head(3)["tf"].tolist())
+    logger.info("  wrote ig_baseline_mean%s.csv (top3: %s)",
+                OUTPUT_SUFFIX, imp_mean.head(3)["tf"].tolist())
     rankings["mean"] = imp_mean
 
     # 2. Zero baseline
@@ -220,8 +221,8 @@ def main() -> int:
     )
     imp_zero = aggregate_importance(full_zero)
     imp_zero.to_csv(RESULTS_DIR / f"ig_baseline_zero{OUTPUT_SUFFIX}.csv", index=False)
-    logger.info("  wrote ig_baseline_zero.csv (top3: %s)",
-                imp_zero.head(3)["tf"].tolist())
+    logger.info("  wrote ig_baseline_zero%s.csv (top3: %s)",
+                OUTPUT_SUFFIX, imp_zero.head(3)["tf"].tolist())
     rankings["zero"] = imp_zero
 
     # 3. Random baseline (average over 3 draws, seeds 1, 2, 3)
@@ -251,8 +252,8 @@ def main() -> int:
     ).reset_index(drop=True)
     imp_random["rank"] = np.arange(1, len(imp_random) + 1)
     imp_random.to_csv(RESULTS_DIR / f"ig_baseline_random{OUTPUT_SUFFIX}.csv", index=False)
-    logger.info("  wrote ig_baseline_random.csv (top3: %s)",
-                imp_random.head(3)["tf"].tolist())
+    logger.info("  wrote ig_baseline_random%s.csv (top3: %s)",
+                OUTPUT_SUFFIX, imp_random.head(3)["tf"].tolist())
     rankings["random"] = imp_random
 
     # Stability table

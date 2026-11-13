@@ -1,0 +1,66 @@
+arm,drug,family,hr_per_sd,ci_low,ci_high,p,n,events,note
+S1_strata_mrna,brigatinib,candidate,0.8390248084930756,0.585490221329984,1.2023473725449068,0.3390117341250611,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,composite_candidates7,composite,0.9902072753307113,0.7293360763852734,1.344387697064795,0.9497043551513811,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,docetaxel,positive_control,1.032801528661977,0.764437247161187,1.3953781053549312,0.8334836724477831,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,entinostat,candidate,0.9825820718966026,0.7402904496556046,1.304173960992975,0.903189678920254,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,epirubicin,positive_control,0.9761292485725299,0.7046858295106913,1.3521320707986735,0.884453928930053,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,erlotinib,candidate,0.8605689069254431,0.6281391967092818,1.1790043471998295,0.349880822821672,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,olaparib,positive_control,1.1563979999047973,0.8474225403715683,1.5780278084147614,0.35958379377908434,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,osimertinib,candidate,1.214254770662437,0.9090721792812433,1.621889528334517,0.1886873484177202,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,paclitaxel,positive_control,1.0502554934375683,0.7664408157094149,1.4391673549833373,0.7603195294165941,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,pelitinib,candidate,1.0623013567024966,0.7839884282015414,1.4394143227862328,0.6965995159958231,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,saracatinib,candidate,1.031530435661349,0.7688630402917809,1.3839331375479922,0.8359836588786204,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,talazoparib,positive_control,1.2746695122781126,0.944434003031549,1.7203768186193158,0.11267472107965609,356,49,stratified by the mRNA subtype of the cohort
+S1_strata_mrna,trametinib,candidate,0.9453640291757753,0.7005865261924434,1.2756641959939192,0.7132490604121893,356,49,stratified by the mRNA subtype of the cohort
+S1b_strata_intrinsic,brigatinib,candidate,0.9473132900412379,0.7129304976345676,1.258751691036148,0.7089909868417945,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,composite_candidates7,composite,1.0170646258243985,0.7687841314133035,1.3455278417384664,0.9056720692049738,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,docetaxel,positive_control,1.017609317573624,0.7649590702997138,1.353704745022414,0.9045758961679301,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,entinostat,candidate,0.9523134465767309,0.7119335999953638,1.2738560176633857,0.7420085257602256,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,epirubicin,positive_control,1.096986553745464,0.8270984560137632,1.4549410536903782,0.5205788729749419,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,erlotinib,candidate,0.9173937873215756,0.6899157494209504,1.2198755597659467,0.5531823928596318,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,olaparib,positive_control,1.1161626561287061,0.8297977283492697,1.5013527181071185,0.4675157867982378,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,osimertinib,candidate,1.1739083298092725,0.8822118676711534,1.5620519483980362,0.2712862020760267,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,paclitaxel,positive_control,1.0289828380402812,0.7670391268322028,1.3803802751943002,0.8488345701964585,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,pelitinib,candidate,1.0885219111588764,0.8183632040629877,1.4478656239556138,0.5600506878571556,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,saracatinib,candidate,1.0135600042953747,0.7545238059390929,1.3615261363803366,0.9287283148696882,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,talazoparib,positive_control,1.340437287640695,0.9950504239842429,1.8057096191197601,0.05393915635766112,356,49,stratified by the intrinsic subtype
+S1b_strata_intrinsic,trametinib,candidate,1.0027742068715735,0.7546350033837652,1.3325065832594882,0.9847617506968331,356,49,stratified by the intrinsic subtype
+S2_clinical,brigatinib,candidate,0.9836444193264833,0.7416875540648058,1.3045336117202704,0.9088586420604153,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,composite_candidates7,composite,1.090500482813502,0.8172918528226886,1.4550387342163755,0.5560013132479448,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,docetaxel,positive_control,0.9606259746206512,0.7244772593690254,1.2737491083151171,0.7802000781114349,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,entinostat,candidate,1.119869903737907,0.8210823751534414,1.5273846318569253,0.47461651719109155,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,epirubicin,positive_control,1.163415811760131,0.8763991199506521,1.5444291536140509,0.2950149544595872,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,erlotinib,candidate,0.9073097783250859,0.678300545219843,1.2136375824045766,0.5122174229564942,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,olaparib,positive_control,1.1726199280535947,0.8757640389251474,1.5701004317967249,0.2849685362597234,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,osimertinib,candidate,1.1977512483347799,0.9052575805371113,1.584751217478163,0.20652424985662315,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,paclitaxel,positive_control,1.058069291943472,0.79002663560292,1.417054281593164,0.7049094588570309,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,pelitinib,candidate,1.0958011926352802,0.8125036670700417,1.4778767191427205,0.5488706826734204,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,saracatinib,candidate,1.050954017320324,0.7751901824791546,1.424817253218282,0.748927271569084,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,talazoparib,positive_control,1.3468317824701057,1.016014201902543,1.785364660134542,0.03841150076936119,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S2_clinical,trametinib,candidate,1.0345372826483665,0.7727195878157547,1.3850656901487246,0.8195923015536208,353,49,"adjusted for age, tumour size and positive nodes, complete cases"
+S3_no_LAR,brigatinib,candidate,0.8840273437793833,0.6428710545397857,1.2156471177709036,0.4481818730184487,276,39,the androgen-receptor subtype removed
+S3_no_LAR,composite_candidates7,composite,1.0406707693188177,0.7629411505251699,1.4195009003894214,0.8012799662899417,276,39,the androgen-receptor subtype removed
+S3_no_LAR,docetaxel,positive_control,1.040155460027888,0.7551686174104222,1.4326911315990492,0.8095558447546579,276,39,the androgen-receptor subtype removed
+S3_no_LAR,entinostat,candidate,0.9644809824194681,0.6965740220225887,1.3354267257165338,0.8275686529156203,276,39,the androgen-receptor subtype removed
+S3_no_LAR,epirubicin,positive_control,1.1107657302084222,0.8156530043177214,1.5126536662946526,0.5049515019947421,276,39,the androgen-receptor subtype removed
+S3_no_LAR,erlotinib,candidate,0.9639375280000465,0.7040074965754554,1.319837590376073,0.8188028154590574,276,39,the androgen-receptor subtype removed
+S3_no_LAR,olaparib,positive_control,1.193778006688239,0.8632862168734012,1.650791940607959,0.2841563824096237,276,39,the androgen-receptor subtype removed
+S3_no_LAR,osimertinib,candidate,1.2772459818323691,0.932039025475608,1.750310076634904,0.12796675334008265,276,39,the androgen-receptor subtype removed
+S3_no_LAR,paclitaxel,positive_control,1.0260229874690154,0.7470491122516649,1.4091753186639264,0.8739202351914961,276,39,the androgen-receptor subtype removed
+S3_no_LAR,pelitinib,candidate,1.1359613188121347,0.8244850761490392,1.5651079142203197,0.43560417789919204,276,39,the androgen-receptor subtype removed
+S3_no_LAR,saracatinib,candidate,1.0753671348657607,0.7848448501639316,1.4734306716898933,0.6511176101347456,276,39,the androgen-receptor subtype removed
+S3_no_LAR,talazoparib,positive_control,1.2984832060892322,0.9431208932692934,1.7877439133504,0.10937386877702586,276,39,the androgen-receptor subtype removed
+S3_no_LAR,trametinib,candidate,0.9374782040319096,0.6780957111660955,1.2960786634729533,0.6960440212487653,276,39,the androgen-receptor subtype removed
+S4_surgery_year,brigatinib,candidate,0.9756976232580375,0.7342850036885219,1.296480041467943,0.8652959826968198,356,49,adjusted for the year of surgery
+S4_surgery_year,composite_candidates7,composite,1.0229501561614605,0.7750635870976368,1.3501176411980442,0.872674074568934,356,49,adjusted for the year of surgery
+S4_surgery_year,docetaxel,positive_control,1.005098669225852,0.7550324941078853,1.3379865671519422,0.9722051396859003,356,49,adjusted for the year of surgery
+S4_surgery_year,entinostat,candidate,0.9518424265653889,0.7115845034662956,1.2732205389472775,0.7394870239121307,356,49,adjusted for the year of surgery
+S4_surgery_year,epirubicin,positive_control,1.0807289750215474,0.8197231568134268,1.4248409450716075,0.5819970142115625,356,49,adjusted for the year of surgery
+S4_surgery_year,erlotinib,candidate,0.9155920184299278,0.6900109974970666,1.2149208451074769,0.5411790628617309,356,49,adjusted for the year of surgery
+S4_surgery_year,olaparib,positive_control,1.1089203730433725,0.83339722055625,1.4755321513190167,0.4780601904545839,356,49,adjusted for the year of surgery
+S4_surgery_year,osimertinib,candidate,1.1447028410323572,0.858829166292169,1.5257336915148243,0.35659952626057534,356,49,adjusted for the year of surgery
+S4_surgery_year,paclitaxel,positive_control,1.0209485466969794,0.7673306233117659,1.3583922019220311,0.8868494307231652,356,49,adjusted for the year of surgery
+S4_surgery_year,pelitinib,candidate,1.1063692715212252,0.8340155918898594,1.4676619680367506,0.48324329659224297,356,49,adjusted for the year of surgery
+S4_surgery_year,saracatinib,candidate,1.0282623707951064,0.7732576411147806,1.367362502449848,0.8480106232401249,356,49,adjusted for the year of surgery
+S4_surgery_year,talazoparib,positive_control,1.3139297435508528,0.981694243113453,1.7586039473067288,0.06639614862356011,356,49,adjusted for the year of surgery
+S4_surgery_year,trametinib,candidate,0.9949150910385458,0.7494974634743765,1.3206929797836184,0.9718608461694239,356,49,adjusted for the year of surgery

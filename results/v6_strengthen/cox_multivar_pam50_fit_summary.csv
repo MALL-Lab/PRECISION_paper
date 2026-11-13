@@ -1,0 +1,4 @@
+tag,penalizer,n_patients,n_events,n_drugs_predicted,n_fitted,n_failed
+adjusted,0.1,7215,1164,1447,1447,0
+pen05,0.5,7215,1164,1447,1447,0
+pen001,0.01,7215,1164,1447,1447,0

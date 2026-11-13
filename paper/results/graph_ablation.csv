@@ -1,7 +1,8 @@
-config,test_pearson,n_edge_types,excluded
-Full graph,0.75660914,6,set()
-No PPI (gene-gene),0.7585623,4,{'interacts'}
-No CollecTRI (TF-gene),0.75382906,4,{'regulates'}
-No drug-target,0.7550181,4,{'targets'}
-No PPI + No drug-target,0.7296903,2,"{'interacts', 'targets'}"
-Only response edges (no prior knowledge),0.7588612,0,"{'interacts', 'regulates', 'targets'}"
+config,test_pearson,test_pearson_sd,n_seeds,n_edge_types,excluded,shuffled
+Full graph,0.7433812022209167,0.0032058212053512514,5,6,none,none
+No PPI (gene-gene),0.7422134518623352,0.004142225833237146,5,4,interacts,none
+No CollecTRI (TF-gene),0.7423218846321106,0.0022674558241600816,5,4,regulates,none
+No drug-target,0.7257742404937744,0.0038502706820778354,5,4,targets,none
+No PPI + No drug-target,0.7305241346359252,0.004374046012910662,5,2,interacts + targets,none
+Only response edges (no prior knowledge),0.7223357439041138,0.011360743818066637,5,0,interacts + regulates + targets,none
+Drug-target rewired (degrees kept),0.740862250328064,0.001065797934197422,5,6,none,targets

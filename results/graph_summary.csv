@@ -8,3 +8,5 @@ edge,gene_interacts_gene,169174,"gene -> gene (interacts), directed edge count"
 edge,drug_targets_gene,3442,"drug -> gene (targets), directed edge count"
 edge,cell_line_responds_to_drug,614325,"cell_line -> drug (responds_to), directed edge count"
 edge_targets,tf_regulates_gene_targets,6675,distinct gene nodes with at least one TF -> gene edge
+edge_distinct,gene_interacts_gene_distinct_directed,166352,distinct directed gene -> gene edges
+edge_distinct,gene_interacts_gene_distinct_pairs,83176,distinct unordered gene pairs of the PPI edges

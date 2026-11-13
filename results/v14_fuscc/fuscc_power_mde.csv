@@ -1,0 +1,5 @@
+statistic,n_events,mde_hr_per_sd_80,reference_effect,reference_source,reference_hr_per_sd_full_cohort_sd,reference_sd_ratio_tnbc_vs_full,power_1.0x,power_0.7x,power_0.5x
+"per drug, hazard ratio per standard deviation",49,1.4921625741164017,1.4649943025660175,pelitinib_rescaled,1.431490106628453,1.0644950972991705,0.7620757258710977,0.4645837305602177,0.26648317533712296
+"per drug, hazard ratio per standard deviation",49,1.4921625741164017,1.2404998613896803,osimertinib_rescaled,1.2431709193780736,0.9901183325423131,0.3258639376735343,0.18301271688287413,0.11397362410826467
+composite of the seven candidates,49,1.4921625741164017,1.4649943025660175,"pelitinib rescaled, as the composite upper bound",1.431490106628453,1.0644950972991705,0.7620757258710977,0.4645837305602177,0.26648317533712296
+primary correlation,49,,,attenuation ceiling,,,0.0,0.0,0.0

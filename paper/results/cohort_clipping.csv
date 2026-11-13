@@ -1,0 +1,7 @@
+cohort,n_samples,n_tfs,n_tfs_shared_with_prism,activity_mean,activity_sd,pct_below_train_min,pct_above_train_max,pct_outside_train_range
+FUSCC,360,769,769,0.629,2.158,2.14,11.79,13.93
+FUSCC_full_transcriptome,360,770,769,3.636,4.557,2.97,68.42,71.4
+METABRIC,1980,767,767,-0.081,1.47,8.26,4.04,12.3
+SCANB,8438,769,769,0.72,2.112,1.11,11.59,12.7
+TCGA_prism_universe,1231,749,749,0.443,1.868,3.13,8.66,11.79
+TCGA_published,1231,772,771,4.577,5.4,3.52,76.75,80.27

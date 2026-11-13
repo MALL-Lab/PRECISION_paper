@@ -14,10 +14,12 @@ CSV instead of the matrices, which are not redistributed with the paper package
 Usage: python scripts/53_data_summary.py (paths from config.py)
 """
 
+import pickle
 import sys
 from pathlib import Path
 
 import pandas as pd
+import pyreadr
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # scripts/ -> package root
 from config import DATA_DIR, RESULTS_DIR  # noqa: E402
@@ -39,6 +41,13 @@ def main() -> int:
     gdsc = pd.read_csv(DATA / "GDSC" / "processed" / "drug_response_sanger.csv", index_col=0)
     moa_names = pd.read_csv(DATA / "precision_processed" / "drug_moa_names.csv")
     moa_cats = pd.read_csv(DATA / "precision_processed" / "drug_moa_categories.csv")
+    n_tf_features = pd.read_csv(DATA / "precision_processed" / "tf_activities_all_prism.csv",
+                                index_col=0, nrows=0).shape[1]
+    with open(DATA / "precision_graph" / "hetero_graph_prism.pkl", "rb") as f:
+        n_cell_features = pickle.load(f)["features"]["cell_line"].shape[1]
+    # METABRIC was downloaded restricted to CollecTRI targets (Methods)
+    metabric_genes = set(pyreadr.read_r(str(DATA / "METABRIC" / "metabric_expression.rds"))[None].index)
+    snapshot_targets = set(pd.read_csv(DATA / "prior_knowledge" / "collectri_edges.csv")["target"])
 
     rows = [
         ("matrix", "prism_n_cell_lines", resp.shape[0], "PRISM response matrix: cell lines (rows)"),
@@ -53,6 +62,13 @@ def main() -> int:
         ("split", "holdout_n_train_cells", len(train),
          f"cell lines in the training split (seed {SEED}, test fraction {TEST_FRAC})"),
         ("split", "holdout_n_test_cells", len(test), "cell lines in the hold-out test split"),
+        ("matrix", "prism_n_tf_features", n_tf_features, "TF activity features of the PRISM cell lines"),
+        ("graph", "cell_line_n_features", n_cell_features,
+         "cell-line node features: TF activities plus the top-variable genes"),
+        ("matrix", "metabric_n_genes_matrix", len(metabric_genes), "genes of the METABRIC expression matrix"),
+        ("matrix", "metabric_n_collectri_targets_covered", len(metabric_genes & snapshot_targets),
+         "METABRIC genes that are targets of the CollecTRI snapshot"),
+        ("matrix", "collectri_snapshot_n_targets", len(snapshot_targets), "target genes of the CollecTRI snapshot"),
     ]
     df = pd.DataFrame(rows, columns=["element", "type", "count", "description"])
     df["count"] = df["count"].astype(int)

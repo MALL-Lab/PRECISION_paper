@@ -1,0 +1,37 @@
+metric,value
+SCANB_n_tfs,769
+SCANB_n_tfs_changed,125
+SCANB_n_tfs_r099,26
+METABRIC_n_tfs,767
+METABRIC_n_tfs_changed,119
+METABRIC_n_tfs_r099,30
+TCGA_n_tfs,772
+TCGA_n_tfs_changed,137
+TCGA_n_tfs_r099,39
+SCANB_drugs_FDR005,604
+SCANB_drugs_FDR005_shared,574
+METABRIC_drugs_FDR005,87
+METABRIC_drugs_FDR005_shared,71
+TCGA_drugs_FDR005,0
+TCGA_drugs_FDR005_shared,0
+Fisher_drugs_FDR005,558
+Fisher_drugs_FDR005_shared,525
+shared_drugs_both_cohorts,59
+shared_drugs_direction_consistent,59
+positive_control_paclitaxel_fisher_padj,0.0045342566445315
+positive_control_docetaxel_fisher_padj,0.0498665755548002
+positive_control_epirubicin_fisher_padj,6.052276304734844e-06
+positive_control_olaparib_fisher_padj,0.0769464692606242
+positive_control_talazoparib_fisher_padj,3.0232135730054408e-05
+candidates_n_statistical_filter,154
+candidates_n_stable_pen05,56
+candidates_n_kinase_hdac,18
+candidates_n_extended_set,15
+candidates_n_selected,7
+candidates_selected,"[""brigatinib"", ""entinostat"", ""erlotinib"", ""indirubin"", ""osimertinib"", ""pelitinib"", ""saracatinib""]"
+candidates_n_unchanged,6
+candidates_added,"[""indirubin""]"
+candidates_dropped,"[""trametinib""]"
+added_indirubin_hr,8.82
+added_indirubin_moa,"CDK inhibitor, glycogen synthase kinase inhibitor"
+dropped_trametinib_rank,35

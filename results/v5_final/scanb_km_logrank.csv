@@ -1,0 +1,5 @@
+drug,n_patients,n_events,n_sensitive,n_resistant,chi2,p,median_os_sensitive_years,median_os_resistant_years,sensitive_worse
+paclitaxel,7397,1188,3698,3699,18.786080990665596,1.4623044491650028e-05,inf,inf,True
+epirubicin,7397,1188,3698,3699,65.4185457676841,6.056623827353815e-16,inf,inf,True
+erlotinib,7397,1188,3698,3699,36.02881185459751,1.944213977324576e-09,inf,inf,False
+entinostat,7397,1188,3698,3699,47.49804101269103,5.5058939535674235e-12,inf,inf,False

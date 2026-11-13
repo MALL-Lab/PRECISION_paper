@@ -93,8 +93,8 @@ def main() -> int:
     # Split convention: first token = patient, rest = tissue/biopsy info
     def _parse(sid: str):
         # AURORA format: AUR-{patient}-TT{P|M}{n}-A-...
-        # e.g. AUR-AFEA-TTP1-A-1-0-R-A741-41  (primary)
-        #      AUR-AFEA-TTM4-A-1-1-R-A742-41  (metastasis biopsy 4)
+        # e.g. AUR-XXXX-TTP1-A-1-0-R-XXXX-XX  (primary)
+        #      AUR-XXXX-TTM4-A-1-1-R-XXXX-XX  (metastasis biopsy 4)
         parts = sid.split("-")
         if len(parts) >= 3:
             pid = parts[1]

@@ -20,9 +20,18 @@ data/TCGA/
 data/AURORA-US/
 data/prior_knowledge/omnipath_ppi.csv
 data/precision_graph/
+# FUSCC-TNBC sources and processed per-patient files (the clinical table is under the Elsevier user license),
+# the ICLAC register and other third-party inputs read only at Level 3
+data/FUSCC/
+data/reference/
+data/prior_knowledge/string_ppi_*.csv
 
 # Regenerable heavy outputs
 results/v5_final/scanb_perdrug_predictions.csv
+# Per-patient or per-sample outputs of a Level 3 rerun, never redistributed
+results/v14_fuscc/fuscc_excluded_patients.csv
+results/v15_gene_universe/tf_activities_*.csv
+results/v9_aurora/aurora_drug_predictions.csv
 results/**/*.log
 
 # LaTeX build artefacts
@@ -40,11 +49,13 @@ results/**/*.log
 # out of the repository.
 data/precision_processed/*
 !data/precision_processed/prism_drug_annotations.csv
-data/PRISM/processed/
+!data/precision_processed/fuscc_r_summary.csv
+data/PRISM/processed/*
+!data/PRISM/processed/drug_response_prism.csv
 data/GDSC/processed/
 data/TCGA/gdc_tmp/
 
-# Checkpoints not needed downstream (the four IG checkpoints in results/v4_xai/ are tracked)
+# Checkpoints not needed downstream (the seven loaded GNN checkpoints in results/v12_gnn/ are tracked)
 results/*.pt
 results/v2_fair/*.pt
 results/v5_final/*.pt

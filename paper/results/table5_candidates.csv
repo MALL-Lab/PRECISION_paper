@@ -1,8 +1,8 @@
-Drug,MOA,Phase,HR_PAM50adj,padj_PAM50adj,HR_pen05,padj_pen05
-osimertinib,EGFR inhibitor,Launched,6.38,1.34e-05,2.09,1.47e-02
-saracatinib,src inhibitor,Phase 2/Phase 3,5.5,1.68e-05,2.01,1.19e-02
-erlotinib,EGFR inhibitor,Launched,4.28,1.52e-06,1.94,1.69e-03
-brigatinib,"ALK tyrosine kinase receptor inhibitor, EGFR inhibitor",Launched,3.63,2.56e-06,1.74,3.45e-03
-pelitinib,EGFR inhibitor,Phase 2,3.42,3.95e-05,1.56,3.90e-02
-entinostat,HDAC inhibitor,Phase 3,3.28,8.36e-05,1.71,1.25e-02
-trametinib,MEK inhibitor,Launched,2.0,4.74e-05,1.34,1.44e-02
+Drug,MOA,Phase,HR_PAM50adj,CI95_PAM50adj,padj_PAM50adj,HR_per_SD,HR_pen05,padj_pen05,r_test
+osimertinib,EGFR inhibitor,Launched,6.38,3.02-13.48,1.3e-05,1.12,2.09,1.5e-02,0.29
+saracatinib,src inhibitor,Phase 2/Phase 3,5.5,2.74-11.02,1.7e-05,1.12,2.01,1.2e-02,0.36
+erlotinib,EGFR inhibitor,Launched,4.28,2.51-7.30,1.5e-06,1.14,1.94,1.7e-03,0.06
+brigatinib,"ALK tyrosine kinase receptor inhibitor, EGFR inhibitor",Launched,3.63,2.24-5.88,2.6e-06,1.13,1.74,3.4e-03,0.1
+pelitinib,EGFR inhibitor,Phase 2,3.42,2.03-5.77,4.0e-05,1.11,1.56,3.9e-02,0.47
+entinostat,HDAC inhibitor,Phase 3,3.28,1.94-5.54,8.4e-05,1.11,1.71,1.3e-02,0.04
+trametinib,MEK inhibitor,Launched,2.0,1.48-2.69,4.7e-05,1.11,1.34,1.4e-02,0.5

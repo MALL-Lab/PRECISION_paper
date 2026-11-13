@@ -9,9 +9,14 @@ and reports, both for the full drug set (FDR, quoted in the Discussion) and for
 the top-200-by-prediction-variance subset (nominal, shown in Supp Fig), the
 number of significant drugs and the hazard-ratio range.
 
-Output: results/v8_multicohort/penalizer_sweep.csv
-  columns: penalizer, n_drugs, n_nominal_all, n_fdr_all, hr_min_all, hr_max_all,
-           n_nominal_top200, hr_min_top200, hr_max_top200
+Outputs in results/v8_multicohort/:
+  penalizer_sweep.csv, one row per penalizer: penalizer, n_drugs, n_nominal_all,
+    n_fdr_all, hr_min_all, hr_max_all (every tested drug), hr_min_fdr, hr_max_fdr
+    (drugs at FDR < 0.05, the range quoted in Supplementary Figure 11),
+    n_nominal_top200, hr_min_top200, hr_max_top200
+  penalizer_sweep_perdrug.csv, one row per drug and penalizer: drug, penalizer,
+    HR, p, padj (Benjamini-Hochberg within each penalizer), so that statements
+    about individual drugs (the Table 5 candidates) can be checked
 
 Run from project root:
     python scripts/45_penalizer_sweep.py
@@ -79,7 +84,7 @@ def main():
                 X.shape[0], X.shape[1], int(surv["os_event"].sum()))
     top200 = X.var().sort_values(ascending=False).head(N_TOP).index.tolist()
 
-    rows = []
+    rows, perdrug = [], []
     for pen in PENALIZERS:
         hrs, ps = {}, {}
         for d in X.columns:
@@ -95,13 +100,17 @@ def main():
         padj = pd.Series(np.clip(padj, 0, 1), index=order.index)
         n_fdr = int((padj < 0.05).sum())
         n_nom = int((pv < 0.05).sum())
+        hv_fdr = hv[padj.index[padj < 0.05]]
         t2 = [d for d in top200 if d in pv.index]
         pv2 = pv[t2]
         hv2 = hv[t2]
+        perdrug += [{"drug": d, "penalizer": pen, "HR": hv[d], "p": pv[d], "padj": padj[d]}
+                    for d in pv.index]
         rows.append({
             "penalizer": pen, "n_drugs": int(m),
             "n_nominal_all": n_nom, "n_fdr_all": n_fdr,
             "hr_min_all": float(hv.min()), "hr_max_all": float(hv.max()),
+            "hr_min_fdr": float(hv_fdr.min()), "hr_max_fdr": float(hv_fdr.max()),
             "n_nominal_top200": int((pv2 < 0.05).sum()),
             "hr_min_top200": float(hv2.min()), "hr_max_top200": float(hv2.max()),
         })
@@ -112,7 +121,8 @@ def main():
 
     out = pd.DataFrame(rows)
     out.to_csv(RESULTS / "penalizer_sweep.csv", index=False)
-    logger.info("Wrote penalizer_sweep.csv")
+    pd.DataFrame(perdrug).to_csv(RESULTS / "penalizer_sweep_perdrug.csv", index=False)
+    logger.info("Wrote penalizer_sweep.csv and penalizer_sweep_perdrug.csv")
 
 
 if __name__ == "__main__":

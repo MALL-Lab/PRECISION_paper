@@ -131,7 +131,7 @@ def main():
 
     # ── 7. Per-drug PRISM annotations (MOA, target, phase, disease area) ──
     # One row per compound name, used by the candidate selection rule of
-    # generate_paper_results.py (Table 5 and Supplementary Table S1). Written
+    # generate_paper_results.py (Table 5 and Supplementary Data 1). Written
     # from the raw treatment-info file when it is available; otherwise the
     # shipped copy is kept.
     logger.info("=" * 60)

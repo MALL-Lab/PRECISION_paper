@@ -1,6 +1,8 @@
-Model,Global_Pearson,Median_PerDrug_Pearson,Pct_Drugs_GT_0.3
-Ridge_expression,0.728,0.114,10.6
-RF_TF,0.769,0.128,14.2
-SAGE_learned_emb,0.756,0.048,1.4
-HGT_learned_emb,0.505,0.001,0.3
-Ridge_expr_GNN_emb,0.723,0.112,10.4
+Model,Global_Pearson,Global_Pearson_SD,Median_PerDrug_Pearson,Median_PerDrug_Pearson_SD,Pct_Drugs_GT_0.3,N_drugs,N_seeds,Row_type,Label
+Ridge_expression,0.726,,0.114,,10.6,1447,1,model,Ridge_expression
+RF_TF,0.769,0.0,0.126,0.003,14.5,1447,5,model,RF_TF
+SAGE_learned_emb,0.743,0.003,0.032,0.009,0.8,1447,5,model,SAGE_learned_emb
+HGT_learned_emb,0.472,0.027,0.048,0.012,1.2,1447,5,model,HGT_learned_emb
+Ridge_expr_GNN_emb,0.723,0.0,0.112,0.001,10.4,1447,5,model,Ridge_expr_GNN_emb
+Drug_mean_reference,0.764,,,,,1447,1,reference,Drug mean (no cell-line features)
+Transfer_Ridge_TF,0.7,,0.086,,6.2,1447,1,reference,Ridge on TF activities (clinical transfer model)

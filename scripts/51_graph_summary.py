@@ -44,6 +44,17 @@ def main() -> int:
     rows.append({"element": "edge_targets", "type": "tf_regulates_gene_targets",
                  "count": n_targets,
                  "description": "distinct gene nodes with at least one TF -> gene edge"})
+    # OmniPath lists some pairs in both orders, and the graph mirrors every record,
+    # so those directed edges are stored twice. The distinct counts are cited in
+    # the Figure 1 caption and in Methods.
+    ppi_edges = edges[("gene", "interacts", "gene")]["edge_index"]
+    ppi_directed = {(int(a), int(b)) for a, b in zip(ppi_edges[0], ppi_edges[1])}
+    rows.append({"element": "edge_distinct", "type": "gene_interacts_gene_distinct_directed",
+                 "count": len(ppi_directed),
+                 "description": "distinct directed gene -> gene edges"})
+    rows.append({"element": "edge_distinct", "type": "gene_interacts_gene_distinct_pairs",
+                 "count": len({tuple(sorted(pair)) for pair in ppi_directed}),
+                 "description": "distinct unordered gene pairs of the PPI edges"})
     summary = pd.DataFrame(rows)
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
